@@ -32,6 +32,8 @@ import com.example.maxcombo.core.PDBoard
 import com.example.maxcombo.core.PDBoardRect
 import com.example.maxcombo.core.PDRoute
 import com.example.maxcombo.core.PDSolver
+import com.example.maxcombo.core.OrbTarget
+import com.example.maxcombo.core.OrbPresets
 import com.example.maxcombo.overlay.RouteBoardView
 import com.example.maxcombo.overlay.ColorKeyView
 import java.util.concurrent.Executors
@@ -74,6 +76,10 @@ class PadService : Service() {
     private var lockedCells: IntArray? = null
     private var lockedRoute: PDRoute? = null
     private var forceResolve = false
+
+    /** Currently selected clearing goal; changed from the floating target picker. */
+    @Volatile
+    var currentTarget: OrbTarget = OrbTarget.MaxCombo
     private var lastAnalysis = 0L
 
     private val analyzeTask = object : Runnable {
@@ -190,7 +196,7 @@ class PadService : Service() {
         solverExecutor.execute {
             // Complexity slider removed: search effort and route length are fixed so
             // the solver always targets a stable 5..7-combo result.
-            val route = PDSolver.solve(board, maxLen = 22, complexity = 7)
+            val route = PDSolver.solve(board, maxLen = 22, complexity = 7, target = currentTarget)
             mainHandler.post {
                 overlay?.show(board, route)
                 listener?.onBoard(board, route)
@@ -251,6 +257,28 @@ class PadService : Service() {
             setTextColor(0xFFCCCCCC.toInt())
             setPadding(8, 2, 8, 2)
         }, matchW)
+        // Target picker: choose the clearing goal the solver should satisfy.
+        val targetSpinner = android.widget.Spinner(this)
+        val presetLabels = OrbPresets.all.map { it.label }
+        val spinnerAdapter = android.widget.ArrayAdapter(
+            this, android.R.layout.simple_spinner_item, presetLabels,
+        )
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        targetSpinner.adapter = spinnerAdapter
+        targetSpinner.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long,
+                ) {
+                    currentTarget = OrbPresets.all[position]
+                }
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            }
+        col.addView(targetSpinner, matchW)
+
         val analyzeBtn = Button(this).apply {
             text = "分析"
             textSize = 14f

@@ -162,6 +162,46 @@ class PDBoard(val cells: IntArray) {
         return ResolveResult(combos, cleared)
     }
 
+    /**
+     * First-wave clearing facts right after a drag (before any cascade drop):
+     * per-color cleared count, any full horizontal row, any plus/cross.
+     * Computed directly from the current runs(), so no cells are mutated.
+     */
+    fun firstWave(): FirstWave {
+        val cc = IntArray(Orb.COLOR_COUNT)
+        for (run in runs()) {
+            for (i in run) {
+                val v = cells[i]
+                if (v in 0 until Orb.COLOR_COUNT) cc[v]++
+            }
+        }
+        // Full horizontal row: six same-colour cells in one row.
+        var horizontal = -1
+        outer@ for (row in 0 until ROWS) {
+            val v = cell(row, 0)
+            if (v == Orb.EMPTY) continue
+            for (col in 1 until COLS) {
+                if (cell(row, col) != v) continue@outer
+            }
+            horizontal = v
+            break
+        }
+        // Plus/cross: centre plus its four arms, all same colour.
+        var cross = -1
+        for (row in 1 until ROWS - 1) {
+            for (col in 1 until COLS - 1) {
+                val v = cell(row, col)
+                if (v != Orb.EMPTY &&
+                    cell(row - 1, col) == v && cell(row + 1, col) == v &&
+                    cell(row, col - 1) == v && cell(row, col + 1) == v
+                ) {
+                    cross = v
+                }
+            }
+        }
+        return FirstWave(cc, horizontal, cross)
+    }
+
     /** Cheap heuristic: how many cells already sit in a pair. */
     val nearScore: Int
         get() {

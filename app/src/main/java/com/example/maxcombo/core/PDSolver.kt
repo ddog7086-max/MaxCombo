@@ -43,6 +43,7 @@ object PDSolver {
         budgetPerRestart: Int = 0,
         restarts: Int = 0,
         seed: ULong = 0x123456789ABCDEF0uL,
+        target: OrbTarget = OrbTarget.MaxCombo,
     ): PDRoute {
         // Complexity 0..20 scales search effort (more restarts / budget); high
         // settings run a deeper search to chase a full board clear.
@@ -59,7 +60,7 @@ object PDSolver {
         // more elaborate path).
         for (k in 0 until MULTI_RUNS) {
             val rng = SplitMix64(seed + k.toULong())
-            val (score, path, combos) = saOnce(board, rng, maxLen, effBudget, effRestarts)
+            val (score, path, combos) = saOnce(board, rng, maxLen, effBudget, effRestarts, target)
             if (score > bestScore || (score == bestScore && path.size > bestPath.size)) {
                 bestScore = score
                 bestPath = path
@@ -78,6 +79,7 @@ object PDSolver {
         maxLen: Int,
         budget: Int,
         restarts: Int,
+        target: OrbTarget,
     ): Triple<Double, List<Int>, Int> {
         var bestPath: List<Int> = emptyList()
         var bestScore = Double.NEGATIVE_INFINITY
@@ -88,7 +90,7 @@ object PDSolver {
             val start = rng.nextInt(PDBoard.CELL_COUNT)
             val length = rng.nextInt(4, maxLen + 1)
             val candidate = randomPathFrom(start, length, maxLen, rng)
-            val (score, combos) = evaluate(board, candidate)
+            val (score, combos) = evaluate(board, candidate, target)
             if (score > bestScore) {
                 bestScore = score
                 bestPath = candidate
@@ -164,7 +166,7 @@ object PDSolver {
                 // Reject tight short loops / knots (a cell revisited within a few
                 // steps); long detour revisits that help clear orbs are kept.
                 if (hasShortLoop(candidate)) return@repeat
-                val (score, combos) = evaluate(board, candidate)
+                val (score, combos) = evaluate(board, candidate, target)
                 val delta = score - currentScore
                 if (delta >= 0 || rng.nextUnit() < exp(delta / max(temperature, 1e-6))) {
                     currentPath = candidate
@@ -184,7 +186,11 @@ object PDSolver {
         return Triple(bestScore, bestPath, bestCombos)
     }
 
-    fun evaluate(board: PDBoard, path: List<Int>): Pair<Double, Int> {
+    fun evaluate(
+        board: PDBoard,
+        path: List<Int>,
+        target: OrbTarget = OrbTarget.MaxCombo,
+    ): Pair<Double, Int> {
         val after = board.dragged(along = path)
         val st = after.resolveStats()
         // Board-clear dominates: maximise the number of orbs actually cleared
@@ -197,6 +203,9 @@ object PDSolver {
             st.combos == 4 || st.combos == 8 -> 15.0
             else -> 0.0
         }
+        // Goal presets: a route that satisfies the chosen clearing goal gets a
+        // large bonus so it wins over routes that merely clear more orbs.
+        val targetBonus = if (target.matches(after.firstWave())) 300.0 else 0.0
         // Count direction changes (turns). A small per-turn penalty prefers a
         // plain, straight, non-zigzag route over one that shuttles left-right;
         // it is tiny vs one extra clear (100 pts) so clears still dominate.
@@ -209,7 +218,7 @@ object PDSolver {
             if (d1r != d2r || d1c != d2c) turns++
         }
         val score = st.cleared * 100.0 + st.combos * 10.0 + comboTarget +
-            path.size * 0.15 - turns * 1.0
+            targetBonus + path.size * 0.15 - turns * 1.0
         return Pair(score, st.combos)
     }
 
