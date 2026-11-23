@@ -59,6 +59,14 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
         statusText = findViewById(R.id.statusText)
         preview = findViewById(R.id.preview)
         preview.showOrbs = true // main preview re-draws the board; overlay draws route only
+        preview.onCellClick = { idx ->
+            PadService.instance?.fixedStart = idx
+            Toast.makeText(
+                this,
+                "起点已设：第${PDBoard.rowOf(idx) + 1}行 第${PDBoard.colOf(idx) + 1}列",
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
         toggleBtn = findViewById(R.id.toggleBtn)
 
         versionName = try {

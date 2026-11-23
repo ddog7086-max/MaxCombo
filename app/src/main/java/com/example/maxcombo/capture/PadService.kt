@@ -85,6 +85,10 @@ class PadService : Service() {
     @Volatile
     var currentComplexity: Int = 7
 
+    /** Fixed route-start cell index; -1 = let the solver choose. */
+    @Volatile
+    var fixedStart: Int = -1
+
     /** Result line (combo / moves / cleared) refreshed after each analysis. */
     private var resultView: android.widget.TextView? = null
     private var lastAnalysis = 0L
@@ -204,7 +208,8 @@ class PadService : Service() {
             // Complexity slider removed: search effort and route length are fixed so
             // the solver always targets a stable 5..7-combo result.
             val route = PDSolver.solve(
-                board, maxLen = 22, complexity = currentComplexity, target = currentTarget,
+                board, maxLen = 22, complexity = currentComplexity,
+                target = currentTarget, fixedStart = fixedStart,
             )
             mainHandler.post {
                 overlay?.show(board, route)
@@ -320,6 +325,13 @@ class PadService : Service() {
             setPadding(8, 4, 8, 4)
         }
         col.addView(resultView, matchW)
+
+        val clearStartBtn = Button(this).apply {
+            text = "清除起点"
+            textSize = 13f
+            setOnClickListener { fixedStart = -1 }
+        }
+        col.addView(clearStartBtn, matchW)
 
         val analyzeBtn = Button(this).apply {
             text = "分析"

@@ -44,6 +44,7 @@ object PDSolver {
         restarts: Int = 0,
         seed: ULong = 0x123456789ABCDEF0uL,
         target: OrbTarget = OrbTarget.MaxCombo,
+        fixedStart: Int = -1,
     ): PDRoute {
         // Complexity 0..20 scales search effort (more restarts / budget); high
         // settings run a deeper search to chase a full board clear.
@@ -60,7 +61,7 @@ object PDSolver {
         // more elaborate path).
         for (k in 0 until MULTI_RUNS) {
             val rng = SplitMix64(seed + k.toULong())
-            val (score, path, combos) = saOnce(board, rng, maxLen, effBudget, effRestarts, target)
+            val (score, path, combos) = saOnce(board, rng, maxLen, effBudget, effRestarts, target, fixedStart)
             if (score > bestScore || (score == bestScore && path.size > bestPath.size)) {
                 bestScore = score
                 bestPath = path
@@ -80,6 +81,7 @@ object PDSolver {
         budget: Int,
         restarts: Int,
         target: OrbTarget,
+        fixedStart: Int = -1,
     ): Triple<Double, List<Int>, Int> {
         var bestPath: List<Int> = emptyList()
         var bestScore = Double.NEGATIVE_INFINITY
@@ -87,7 +89,11 @@ object PDSolver {
 
         // Seed from many random drags of varied length to give SA diverse starts.
         repeat(36) {
-            val start = rng.nextInt(PDBoard.CELL_COUNT)
+            val start = if (fixedStart in 0 until PDBoard.CELL_COUNT) {
+                fixedStart
+            } else {
+                rng.nextInt(PDBoard.CELL_COUNT)
+            }
             val length = rng.nextInt(4, maxLen + 1)
             val candidate = randomPathFrom(start, length, maxLen, rng)
             val (score, combos) = evaluate(board, candidate, target)

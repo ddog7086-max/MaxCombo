@@ -31,6 +31,9 @@ class RouteBoardView : View {
     /** Calibrated board rect supplied by the service (normalised 0..1). */
     var boardRect: PDBoardRect? = null
 
+    /** Invoked with the tapped cell index in the main preview (fixed-start pick). */
+    var onCellClick: ((Int) -> Unit)? = null
+
     private val orbPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(245, 255, 255, 255)
@@ -64,6 +67,25 @@ class RouteBoardView : View {
         this.board = board
         this.route = route
         invalidate()
+    }
+
+    init {
+        setOnTouchListener { _, e ->
+            if (e.action == android.view.MotionEvent.ACTION_UP) {
+                val fb = if (showOrbs) PDBoardRect.FALLBACK
+                    else (boardRect ?: PDBoardRect.LOCKED)
+                val ox = fb.x * width
+                val oy = fb.y * height
+                val cellW = fb.width * width / PDBoard.COLS
+                val cellH = fb.height * height / PDBoard.ROWS
+                val col = ((e.x - ox) / cellW).toInt()
+                val row = ((e.y - oy) / cellH).toInt()
+                if (row in 0 until PDBoard.ROWS && col in 0 until PDBoard.COLS) {
+                    onCellClick?.invoke(PDBoard.index(row, col))
+                }
+            }
+            true
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
