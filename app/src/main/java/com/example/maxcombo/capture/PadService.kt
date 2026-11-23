@@ -80,6 +80,13 @@ class PadService : Service() {
     /** Currently selected clearing goal; changed from the floating target picker. */
     @Volatile
     var currentTarget: OrbTarget = OrbTarget.MaxCombo
+
+    /** Search-effort level (complexity): 轻松 3 / 标准 7 / 深入 12. */
+    @Volatile
+    var currentComplexity: Int = 7
+
+    /** Result line (combo / moves / cleared) refreshed after each analysis. */
+    private var resultView: android.widget.TextView? = null
     private var lastAnalysis = 0L
 
     private val analyzeTask = object : Runnable {
@@ -196,10 +203,13 @@ class PadService : Service() {
         solverExecutor.execute {
             // Complexity slider removed: search effort and route length are fixed so
             // the solver always targets a stable 5..7-combo result.
-            val route = PDSolver.solve(board, maxLen = 22, complexity = 7, target = currentTarget)
+            val route = PDSolver.solve(
+                board, maxLen = 22, complexity = currentComplexity, target = currentTarget,
+            )
             mainHandler.post {
                 overlay?.show(board, route)
                 listener?.onBoard(board, route)
+                resultView?.text = "Combo ${route.combos} · 步数 ${route.path.size} · 消 ${route.cleared}"
                 restoreAnalyzeBtn()
             }
         }
@@ -278,6 +288,38 @@ class PadService : Service() {
                 override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
             }
         col.addView(targetSpinner, matchW)
+
+        // Search-effort picker: 轻松 3 / 标准 7 / 深入 12.
+        val levelSpinner = android.widget.Spinner(this)
+        val levelLabels = listOf("轻松", "标准", "深入")
+        val levelAdapter = android.widget.ArrayAdapter(
+            this, android.R.layout.simple_spinner_item, levelLabels,
+        )
+        levelAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        levelSpinner.adapter = levelAdapter
+        levelSpinner.setSelection(1)
+        levelSpinner.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long,
+                ) {
+                    currentComplexity = intArrayOf(3, 7, 12)[position]
+                }
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            }
+        col.addView(levelSpinner, matchW)
+
+        // Result line refreshed after each analysis.
+        resultView = android.widget.TextView(this).apply {
+            text = "Combo - · 步数 - · 消 -"
+            textSize = 11f
+            setTextColor(0xFFCCCCCC.toInt())
+            setPadding(8, 4, 8, 4)
+        }
+        col.addView(resultView, matchW)
 
         val analyzeBtn = Button(this).apply {
             text = "分析"

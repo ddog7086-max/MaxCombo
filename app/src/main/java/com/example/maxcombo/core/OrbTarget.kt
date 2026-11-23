@@ -17,6 +17,9 @@ sealed class OrbTarget {
     /** Form a plus/cross of [color] (centre + four arms, five orbs). */
     data class Cross(val color: Int) : OrbTarget()
 
+    /** Fixed five colours: fire/water/wood/light/dark each clear a group (>=3). */
+    object FiveColor : OrbTarget()
+
     /** Human-readable label for the preset button / menu. */
     val label: String
         get() = when (this) {
@@ -24,6 +27,7 @@ sealed class OrbTarget {
             is ColorCount -> "${colorName(color)} ${count} 颗"
             is Horizontal -> "${colorName(color)} 横排"
             is Cross -> "${colorName(color)} 十字"
+            FiveColor -> "固定 5 色"
         }
 
     private fun colorName(c: Int): String = when (c) {
@@ -52,4 +56,6 @@ fun OrbTarget.matches(fw: FirstWave): Boolean = when (this) {
     is OrbTarget.ColorCount -> fw.colorCount(color) >= count
     is OrbTarget.Horizontal -> fw.horizontalColor == color
     is OrbTarget.Cross -> fw.crossColor == color
+    OrbTarget.FiveColor -> listOf(Orb.FIRE, Orb.WATER, Orb.WOOD, Orb.LIGHT, Orb.DARK)
+        .all { fw.colorCount(it) >= 3 }
 }
