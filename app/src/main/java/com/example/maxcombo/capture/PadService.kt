@@ -273,19 +273,42 @@ class PadService : Service() {
         }
         val kd = resources.displayMetrics.density
 
+        // One horizontal row: refresh (analyze) side by side with power (close).
+        val row = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
         // Refresh / re-scan icon instead of a text "分析" label.
         analyzeBtn = android.widget.ImageButton(this).apply {
             setImageResource(R.drawable.ic_refresh)
             setBackgroundResource(R.drawable.btn_gray)
             stateListAnimator = null
-            val pad = (12 * kd).toInt()
+            val pad = (10 * kd).toInt()
             setPadding(pad, pad, pad, pad)
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-            val s = (56 * kd).toInt()
-            layoutParams = FrameLayout.LayoutParams(s, s)
+            val s = (46 * kd).toInt()
+            layoutParams = android.widget.LinearLayout.LayoutParams(s, s)
             setOnClickListener { analyze() }
         }
-        col.addView(analyzeBtn)
+        row.addView(analyzeBtn)
+
+        // Power / shutdown icon instead of a text "×".
+        val closeBtn = android.widget.ImageButton(this).apply {
+            setImageResource(R.drawable.ic_power)
+            setBackgroundResource(R.drawable.btn_gray)
+            stateListAnimator = null
+            val pad = (9 * kd).toInt()
+            setPadding(pad, pad, pad, pad)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            val s = (42 * kd).toInt()
+            layoutParams = android.widget.LinearLayout.LayoutParams(s, s).apply {
+                marginStart = (8 * kd).toInt()
+            }
+            setOnClickListener { teardown() }
+        }
+        row.addView(closeBtn)
+        col.addView(row)
 
         resultView = android.widget.TextView(this).apply {
             text = "—"
@@ -295,20 +318,6 @@ class PadService : Service() {
             setPadding(6, 3, 6, 3)
         }
         col.addView(resultView)
-
-        // Power / shutdown icon instead of a text "×".
-        val closeBtn = android.widget.ImageButton(this).apply {
-            setImageResource(R.drawable.ic_power)
-            setBackgroundResource(R.drawable.btn_gray)
-            stateListAnimator = null
-            val pad = (8 * kd).toInt()
-            setPadding(pad, pad, pad, pad)
-            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-            val s = (32 * kd).toInt()
-            layoutParams = FrameLayout.LayoutParams(s, s).apply { topMargin = (6 * kd).toInt() }
-            setOnClickListener { teardown() }
-        }
-        col.addView(closeBtn)
 
         bar.addView(col)
         val barParams = WindowManager.LayoutParams(
