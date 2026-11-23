@@ -330,7 +330,7 @@ class PadService : Service() {
             Button(this).apply {
                 text = label
                 textSize = size
-                backgroundResource = R.drawable.btn_gray
+                setBackgroundResource(R.drawable.btn_gray)
                 setTextColor(0xFF222222.toInt())
                 stateListAnimator = null
                 setAllCaps(false)
