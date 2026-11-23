@@ -124,35 +124,15 @@ class RouteBoardView : View {
             }
             val cell = minOf(cellW, cellH)
 
-            // Alternating parallel lanes: every edge steps onto the opposite side of
-            // the track (even edges +, odd edges -) so consecutive segments run in
-            // two separated lanes instead of stacking on the same line. Purely
-            // visual; the solved drag path and clear count are unchanged.
-            fun laneOffset(i: Int): FloatArray {
-                val u = center(path[i - 1]); val v = center(path[i])
-                val side = if (i % 2 == 0) 1f else -1f
-                val mag = cell * 0.18f * side
-                return if (Math.abs(v[0] - u[0]) > Math.abs(v[1] - u[1])) {
-                    floatArrayOf(0f, mag)   // horizontal edge: lane off vertically
-                } else {
-                    floatArrayOf(mag, 0f)   // vertical edge: lane off horizontally
-                }
-            }
-            // Each vertex sits on its outgoing edge's lane so consecutive edges
-            // stay in two separated parallel channels through the turn.
+            // PuzzCombo clean style: a SINGLE plain white polyline joining orb
+            // centres. No dual lanes, no outer black pipe, no gradient, no
+            // semicircle fillet — those stacked on top of each other and read as
+            // a messy bundle.
             val rawPts = ArrayList<FloatArray>()
-            for (i in path.indices) {
-                val c = center(path[i])
-                val offOut = if (i < path.size - 1) laneOffset(i + 1) else floatArrayOf(0f, 0f)
-                rawPts.add(
-                    floatArrayOf(
-                        c[0] + offOut[0],
-                        c[1] + offOut[1],
-                    )
-                )
-            }
+            for (i in path.indices) rawPts.add(center(path[i]))
 
-            // Orthogonalise fallback: split any residual diagonal into H-then-V.
+            // Orthogonalise: split any diagonal step into H-then-V so the track
+            // stays on the grid instead of cutting across corners.
             val pts = ArrayList<FloatArray>()
             pts.add(rawPts[0])
             for (i in 1 until rawPts.size) {
@@ -164,79 +144,16 @@ class RouteBoardView : View {
                 pts.add(c)
             }
 
-            // LOCKED style: rectilinear / Manhattan track with a LARGE rounded
-            // fillet so each 90-degree turn sweeps through a near-semicircle
-            // instead of a sharp corner. Do not use free-form bezier.
             val curve = Path()
-            fun lerp(a: FloatArray, b: FloatArray, t: Float) = floatArrayOf(
-                a[0] + (b[0] - a[0]) * t,
-                a[1] + (b[1] - a[1]) * t,
-            )
             curve.moveTo(pts[0][0], pts[0][1])
-            for (i in 1 until pts.size - 1) {
-                val p0 = pts[i - 1]; val p1 = pts[i]; val p2 = pts[i + 1]
-                val d1x = p1[0] - p0[0]; val d1y = p1[1] - p0[1]
-                val d2x = p2[0] - p1[0]; val d2y = p2[1] - p1[1]
-                val dot = d1x * d2x + d1y * d2y
-                // Only a true reversal (180°, dot<0) draws a sharp joint; every
-                // 90° turn sweeps through a fillet using half of each adjacent
-                // leg, i.e. a near-semicircle, never a right-angle.
-                if (dot < 0f) {
-                    curve.lineTo(p1[0], p1[1])
-                    continue
-                }
-                val l1 = Math.hypot(d1x.toDouble(), d1y.toDouble()).toFloat()
-                val l2 = Math.hypot(d2x.toDouble(), d2y.toDouble()).toFloat()
-                val rr = minOf(l1 / 2f, l2 / 2f)
-                if (rr < 1f) {
-                    curve.lineTo(p1[0], p1[1])
-                    continue
-                }
-                val a = lerp(p1, p0, rr / l1)
-                val b = lerp(p1, p2, rr / l2)
-                curve.lineTo(a[0], a[1])
-                curve.quadTo(p1[0], p1[1], b[0], b[1])
-            }
-            curve.lineTo(pts.last()[0], pts.last()[1])
-
-            // Dark near-black outer pipe (thicker) for clear contrast over bright
-            // orbs. Inner core fades white -> black UNIFORMLY by walked distance
-            // (arc-length proportion), so the whole route shades evenly instead of
-            // only the head being white and the tail all black.
-            val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                strokeWidth = 14f
+            for (i in 1 until pts.size) curve.lineTo(pts[i][0], pts[i][1])
+            val cleanLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                strokeWidth = 7f
                 strokeCap = Paint.Cap.ROUND
                 style = Paint.Style.STROKE
-                color = Color.argb(a, 35, 33, 33)
+                color = Color.argb(a, 255, 255, 255)
             }
-            canvas.drawPath(curve, outerPaint)
-
-            // Cumulative arc length so each segment's shade follows how far along
-            // the route it is (0 = white head, 1 = black tail, mid = even grey).
-            val segLen = FloatArray(pts.size - 1)
-            var total = 0f
-            for (j in 0 until pts.size - 1) {
-                val dx = pts[j + 1][0] - pts[j][0]
-                val dy = pts[j + 1][1] - pts[j][1]
-                segLen[j] = Math.hypot(dx.toDouble(), dy.toDouble()).toFloat()
-                total += segLen[j]
-            }
-            val innerSeg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                strokeWidth = 6f
-                strokeCap = Paint.Cap.ROUND
-                style = Paint.Style.STROKE
-            }
-            var acc = 0f
-            for (j in 0 until pts.size - 1) {
-                val t = if (total > 0f) (acc + segLen[j] / 2f) / total else 0f
-                val g = (255 * (1f - t)).toInt().coerceIn(0, 255)
-                innerSeg.color = Color.argb(a, g, g, g)
-                val sp = Path()
-                sp.moveTo(pts[j][0], pts[j][1])
-                sp.lineTo(pts[j + 1][0], pts[j + 1][1])
-                canvas.drawPath(sp, innerSeg)
-                acc += segLen[j]
-            }
+            canvas.drawPath(curve, cleanLine)
 
             // Start: the white end of the line itself, a white filled head seated
             // right on the first point so it reads as one piece with the route.
@@ -268,7 +185,7 @@ class RouteBoardView : View {
                 arrow.lineTo(end[0] - ux * s - px * s * 0.55f, end[1] - uy * s - py * s * 0.55f)
                 arrow.close()
                 val arrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = Color.argb(a, 0, 0, 0)
+                    color = Color.argb(a, 255, 255, 255)
                     style = Paint.Style.FILL
                 }
                 canvas.drawPath(arrow, arrowPaint)
