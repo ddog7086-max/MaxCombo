@@ -1,7 +1,6 @@
 package com.example.maxcombo.core
 
 import android.graphics.Bitmap
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -15,14 +14,6 @@ import kotlin.math.min
  * map to EMPTY.
  */
 object OrbRecognizer {
-
-    /** Target hue angle in degrees (0..360) for each orb, sampled from this skin. */
-    private const val H_FIRE = 3.0      // red
-    private const val H_WATER = 215.0    // deep blue
-    private const val H_WOOD = 121.0    // green
-    private const val H_LIGHT = 50.0    // yellow
-    private const val H_DARK = 266.0    // purple
-    private const val H_HEART = 325.0   // pink
 
     fun classify(bitmap: Bitmap, rect: PDBoardRect): PDBoard? {
         val width = bitmap.width
@@ -43,38 +34,10 @@ object OrbRecognizer {
                 if (px < 2 || px >= width - 2 || py < 2 || py >= height - 2) continue
 
                 // Sample the cell's centre window and keep only the most saturated
-                // pixels: this reads the orb's true base colour. The outer ring is
-                // wrong for the square pink heart (white highlight -> read as fire).
+                // pixels: this reads the orb's true base colour.
                 val cellW = rect.width * width / PDBoard.COLS
                 val cellH = rect.height * height / PDBoard.ROWS
                 val half = maxOf(3, (minOf(cellW, cellH) / 6).toInt())
-
-                // Whole-cell pink vote: the heart square's centre sits on the white
-                // heart graphic, so a centre average drifts toward white/fire. Count
-                // pink pixels (high red, blue clearly above green) across the cell;
-                // a clear majority means heart regardless of the centre graphic.
-                val hw = (cellW * 0.35).toInt()
-                val hh = (cellH * 0.35).toInt()
-                var pink = 0
-                var total = 0
-                for (dy in -hh..hh) {
-                    for (dx in -hw..hw) {
-                        val x = px + dx
-                        val y = py + dy
-                        if (x in 0 until width && y in 0 until height) {
-                            val p = pixels[y * width + x]
-                            val pr = p shr 16 and 0xFF
-                            val pg = p shr 8 and 0xFF
-                            val pb = p and 0xFF
-                            total++
-                            if (pr > 180 && pb > pg + 15) pink++
-                        }
-                    }
-                }
-                if (total > 0 && pink.toDouble() / total > 0.30) {
-                    cells[PDBoard.index(row, col)] = Orb.HEART
-                    continue
-                }
 
                 val sampled = ArrayList<Pair<Double, Int>>()
                 for (dy in -half..half) {
@@ -109,42 +72,28 @@ object OrbRecognizer {
                     cells[PDBoard.index(row, col)] = Orb.EMPTY
                     continue
                 }
-                // Pink heart override: the heart square's hue can drift toward red
-                // under highlight/border noise and be misread as fire, but its RGB
-                // always has blue clearly above green (pink), whereas fire/orange
-                // has green above blue. This rescues hearts before hue matching.
-                cells[PDBoard.index(row, col)] =
-                    if (r > 0.45 && b > g + 0.12) Orb.HEART else hueClass(h)
+                // Fixed hue bands (measured from this skin) instead of nearest-neighbour:
+                // nearest-neighbour pulls orange fire (h30-33) toward yellow light (h50).
+                cells[PDBoard.index(row, col)] = hueBand(h)
             }
         }
         return PDBoard(cells)
     }
 
-    private fun hueClass(h: Double): Int {
-        val targets = arrayOf(
-            Orb.FIRE to H_FIRE,
-            Orb.WATER to H_WATER,
-            Orb.WOOD to H_WOOD,
-            Orb.LIGHT to H_LIGHT,
-            Orb.DARK to H_DARK,
-            Orb.HEART to H_HEART,
-        )
-        var best = Orb.EMPTY
-        var bestDist = Double.POSITIVE_INFINITY
-        for ((color, targetHue) in targets) {
-            val d = hueDistance(h, targetHue)
-            if (d < bestDist) {
-                bestDist = d
-                best = color
-            }
-        }
-        return best
-    }
-
-    /** Shortest angular distance on the colour wheel. */
-    private fun hueDistance(a: Double, b: Double): Double {
-        val d = abs(a - b) % 360.0
-        return min(d, 360.0 - d)
+    /**
+     * Fixed hue bands on the colour wheel (degrees). Measured per-orb from a real
+     * screenshot so highlight/skin drift stays inside the right bucket:
+     * fire h30-33, light h52-66, wood h103-114, water h198-217, dark h271-282,
+     * heart h328-329.
+     */
+    private fun hueBand(h: Double): Int = when {
+        h >= 305 && h <= 350 -> Orb.HEART
+        h < 42 || h >= 345 -> Orb.FIRE
+        h < 75 -> Orb.LIGHT
+        h >= 95 && h <= 150 -> Orb.WOOD
+        h >= 190 && h <= 235 -> Orb.WATER
+        h >= 250 && h <= 300 -> Orb.DARK
+        else -> Orb.EMPTY
     }
 
     /** Saturation of a packed ARGB pixel, used to rank orb-base pixels over face. */
