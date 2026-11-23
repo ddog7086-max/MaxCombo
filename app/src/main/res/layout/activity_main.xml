@@ -18,9 +18,8 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:padding="6dp"
-            android:src="@android:drawable/ic_menu_back"
-            android:contentDescription="back"
-            android:tint="#FFFFFF" />
+            android:src="@drawable/ic_back"
+            android:contentDescription="back" />
 
         <TextView
             android:layout_width="wrap_content"
