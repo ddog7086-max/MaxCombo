@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="未开启。先授予悬浮窗权限，再点「开启助手」允许屏幕录制。"
+            android:padding="12dp"
+            android:background="?attr/colorSurface"
+            android:paddingStart="12dp" android:paddingEnd="12dp"
+            android:layout_marginBottom="12dp" />
+
+        <com.example.maxcombo.overlay.RouteBoardView
+            android:id="@+id/preview"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:background="#1A000000"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="开启后，直接拖动悬浮框对准 6x5 珠阵；拉右下角放大缩小。框住珠子即可，无需精确。"
+            android:textStyle="bold"
+            android:layout_marginBottom="6dp" />
+
+        <Button
+            android:id="@+id/toggleBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="开启助手" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:lineSpacingExtra="4dp"
+            android:text="使用顺序：\n1. 打开 P&amp;D，进到要转珠的那一回合。\n2. 点「开启助手」，允许屏幕录制授权。\n3. 悬浮窗浮在游戏上，每回合约 1 秒后更新路线，从白圈起点照着白线划。\n\n注意：识别靠颜色，不同主题/机型可能要微调参考色；天空掉落随机，路线只算你这一步能确定的 combo。这是外部辅助工具，P&amp;D 用户条款不欢迎这类做法，账号风险自担。" />
+    </LinearLayout>
+</ScrollView>
