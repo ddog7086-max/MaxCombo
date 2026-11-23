@@ -97,6 +97,22 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="路线透明度"
+                android:textColor="@color/textTitle"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <SeekBar
+                android:id="@+id/alphaBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="175"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:text="开启后，游戏内右上角只会留一个极小「分析」钮：点它抓帧识别盘面，再照着路线拖珠。"
                 android:textColor="@color/textBody"
                 android:textSize="15sp"

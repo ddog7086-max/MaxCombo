@@ -105,6 +105,19 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
                 override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
             }
 
+        // Route opacity slider: 80 (light) .. 255 (solid), persisted & live.
+        val alphaBar = findViewById<android.widget.SeekBar>(R.id.alphaBar)
+        alphaBar.progress = sp.getInt(PadService.KEY_ALPHA, 245) - 80
+        alphaBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: android.widget.SeekBar?, p: Int, fromUser: Boolean) {
+                val a = p + 80
+                sp.edit().putInt(PadService.KEY_ALPHA, a).apply()
+                PadService.instance?.applyRouteAlpha(a)
+            }
+            override fun onStartTrackingTouch(s: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(s: android.widget.SeekBar?) {}
+        })
+
         versionName = try {
             packageManager.getPackageInfo(packageName, 0).versionName ?: ""
         } catch (e: Exception) {

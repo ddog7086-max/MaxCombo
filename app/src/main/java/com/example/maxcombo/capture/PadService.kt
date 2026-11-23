@@ -21,7 +21,6 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.FrameLayout
 import androidx.core.app.NotificationCompat
 import android.app.Service
@@ -64,7 +63,7 @@ class PadService : Service() {
     private var controlBar: FrameLayout? = null
     private var colorKey: ColorKeyView? = null
     private var colorKeyBar: FrameLayout? = null
-    private var analyzeBtn: android.widget.Button? = null
+    private var analyzeBtn: android.widget.ImageButton? = null
 
     private var projection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
@@ -92,6 +91,12 @@ class PadService : Service() {
     /** Result line (combo / moves / cleared) refreshed after each analysis. */
     private var resultView: android.widget.TextView? = null
     private var lastAnalysis = 0L
+
+    /** Apply route opacity (80..255) live from the main-screen slider. */
+    fun applyRouteAlpha(a: Int) {
+        overlay?.routeAlpha = a.coerceIn(80, 255)
+        overlay?.invalidate()
+    }
 
     private val analyzeTask = object : Runnable {
         override fun run() {
@@ -165,10 +170,10 @@ class PadService : Service() {
      * route once. No continuous polling, no lock loop. The fixed FALLBACK box
      * covers the whole bottom board so no manual alignment is needed.
      */
-    private fun restoreAnalyzeBtn() { analyzeBtn?.text = "分析" }
+    private fun restoreAnalyzeBtn() { analyzeBtn?.isEnabled = true }
 
     private fun analyze() {
-        analyzeBtn?.text = "分析中…"
+        analyzeBtn?.isEnabled = false
         val reader = imageReader ?: run { restoreAnalyzeBtn(); return }
         val image = reader.acquireLatestImage() ?: run { restoreAnalyzeBtn(); return }
 
@@ -268,15 +273,14 @@ class PadService : Service() {
         }
         val kd = resources.displayMetrics.density
 
-        analyzeBtn = Button(this).apply {
-            text = "分析"
-            textSize = 12f
+        // Refresh / re-scan icon instead of a text "分析" label.
+        analyzeBtn = android.widget.ImageButton(this).apply {
+            setImageResource(R.drawable.ic_refresh)
             setBackgroundResource(R.drawable.btn_gray)
-            setTextColor(0xFF222222.toInt())
             stateListAnimator = null
-            minHeight = 0
-            minWidth = 0
-            setAllCaps(false)
+            val pad = (12 * kd).toInt()
+            setPadding(pad, pad, pad, pad)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
             val s = (56 * kd).toInt()
             layoutParams = FrameLayout.LayoutParams(s, s)
             setOnClickListener { analyze() }
@@ -292,15 +296,15 @@ class PadService : Service() {
         }
         col.addView(resultView)
 
-        val closeBtn = Button(this).apply {
-            text = "×"
-            textSize = 14f
+        // Power / shutdown icon instead of a text "×".
+        val closeBtn = android.widget.ImageButton(this).apply {
+            setImageResource(R.drawable.ic_power)
             setBackgroundResource(R.drawable.btn_gray)
-            setTextColor(0xFF222222.toInt())
             stateListAnimator = null
-            minHeight = 0
-            minWidth = 0
-            val s = (30 * kd).toInt()
+            val pad = (8 * kd).toInt()
+            setPadding(pad, pad, pad, pad)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            val s = (32 * kd).toInt()
             layoutParams = FrameLayout.LayoutParams(s, s).apply { topMargin = (6 * kd).toInt() }
             setOnClickListener { teardown() }
         }
