@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -15,12 +16,10 @@ import androidx.core.content.ContextCompat
 import com.example.maxcombo.capture.PadService
 import com.example.maxcombo.core.PDBoard
 import com.example.maxcombo.core.PDRoute
-import com.example.maxcombo.overlay.RouteBoardView
 
 class MainActivity : AppCompatActivity(), PadService.Listener {
 
     private lateinit var statusText: TextView
-    private lateinit var preview: RouteBoardView
     private lateinit var toggleBtn: Button
     private var versionName = ""
 
@@ -57,17 +56,54 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
         setContentView(R.layout.activity_main)
 
         statusText = findViewById(R.id.statusText)
-        preview = findViewById(R.id.preview)
-        preview.showOrbs = true // main preview re-draws the board; overlay draws route only
-        preview.onCellClick = { idx ->
-            PadService.instance?.fixedStart = idx
-            Toast.makeText(
-                this,
-                "起点已设：第${PDBoard.rowOf(idx) + 1}行 第${PDBoard.colOf(idx) + 1}列",
-                Toast.LENGTH_SHORT,
-            ).show()
-        }
         toggleBtn = findViewById(R.id.toggleBtn)
+
+        // Target picker: chosen here, persisted, read back by PadService on start.
+        val sp = getSharedPreferences(PadService.PREFS, MODE_PRIVATE)
+        val targetSpinner = findViewById<android.widget.Spinner>(R.id.targetSpinner)
+        val labels = com.example.maxcombo.core.OrbPresets.all.map { it.label }
+        val tAdapter = android.widget.ArrayAdapter(
+            this, android.R.layout.simple_spinner_item, labels,
+        )
+        tAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        targetSpinner.adapter = tAdapter
+        targetSpinner.setSelection(sp.getInt(PadService.KEY_TARGET, 0))
+        targetSpinner.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long,
+                ) {
+                    sp.edit().putInt(PadService.KEY_TARGET, position).apply()
+                    PadService.instance?.currentTarget =
+                        com.example.maxcombo.core.OrbPresets.all[position]
+                }
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            }
+
+        // Effort picker: 轻松 3 / 标准 7 / 深入 12.
+        val levelSpinner = findViewById<android.widget.Spinner>(R.id.levelSpinner)
+        val lAdapter = android.widget.ArrayAdapter(
+            this, android.R.layout.simple_spinner_item, listOf("轻松", "标准", "深入"),
+        )
+        lAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        levelSpinner.adapter = lAdapter
+        levelSpinner.setSelection(sp.getInt(PadService.KEY_LEVEL, 1))
+        levelSpinner.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long,
+                ) {
+                    sp.edit().putInt(PadService.KEY_LEVEL, position).apply()
+                    PadService.instance?.currentComplexity = intArrayOf(3, 7, 12)[position]
+                }
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            }
 
         versionName = try {
             packageManager.getPackageInfo(packageName, 0).versionName ?: ""
@@ -93,17 +129,13 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
             【用法】
             1. 打开 P&D 进到转珠回合。
             2. 点「开启助手」，允许通知与屏幕录制。
-            3. 悬浮栏选目标、计算量，点「分析」抓帧，照路线拖珠。
+            3. 在本页选好目标模式与计算量；游戏内右上角点极小「分析」钮抓帧，照路线拖珠。
 
             【目标模式】
             · 最大 Combo：默认，追求最多 combo。
             · 火/水/木/光/闇 N 颗：第一波消够指定颗数。
             · 横排 / 十字：排成一整行 / 十字形。
             · 固定 5 色：火水木光闇各消一组。
-
-            【手设起点】
-            在主界面预览图上点想开始的那一格，路线就从该格起；
-            悬浮栏「清除起点」恢复自动。
 
             【FAQ】
             · 识别错色：换主题/机型后颜色可能要重调，尽量在明亮盘面分析。
@@ -168,6 +200,6 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
     }
 
     override fun onBoard(board: PDBoard, route: PDRoute) {
-        preview.show(board, route)
+        // Route is drawn by the in-game overlay; nothing to render on the main screen.
     }
 }

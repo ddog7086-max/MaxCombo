@@ -112,6 +112,13 @@ class PadService : Service() {
         // not stack a second board on top of the old still-visible one.
         resetBeforeStart()
 
+        // Target & effort are chosen on the app's main screen and persisted;
+        // the in-game overlay only has a tiny 分析 button.
+        val sp = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val ti = sp.getInt(KEY_TARGET, 0)
+        currentTarget = OrbPresets.all.getOrElse(ti) { OrbTarget.MaxCombo }
+        currentComplexity = intArrayOf(3, 7, 12)[sp.getInt(KEY_LEVEL, 1)]
+
         val resultCode = intent?.getIntExtra(EXTRA_RESULT_CODE, 0) ?: 0
         val data = intent?.getParcelableExtra<Intent>(EXTRA_DATA)
 
@@ -214,7 +221,7 @@ class PadService : Service() {
             mainHandler.post {
                 overlay?.show(board, route)
                 listener?.onBoard(board, route)
-                resultView?.text = "Combo ${route.combos} · 步数 ${route.path.size} · 消 ${route.cleared}"
+                resultView?.text = "${route.combos}c · ${route.path.size}步 · ${route.cleared}消"
                 restoreAnalyzeBtn()
             }
         }
@@ -252,144 +259,57 @@ class PadService : Service() {
 
         // --- Small control window (touchable), top-right: 对准 aligns the box,
         // 分析 grabs one frame; the slider sets route opacity.
+        // --- Tiny control window, top-right: one round 分析 button, a result
+        // line, and a small close. Target/effort are set on the main screen.
         val bar = FrameLayout(this)
         val col = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
         }
-        val panelKd = resources.displayMetrics.density
-        val panelW = (132 * panelKd).toInt()
-        val matchW = android.widget.LinearLayout.LayoutParams(
-            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { topMargin = (4 * panelKd).toInt() }
-        // Version tag so the user can confirm the installed build at a glance.
-        val ver = try {
-            packageManager.getPackageInfo(packageName, 0).versionName
-        } catch (e: Exception) { "?" }
-        col.addView(android.widget.TextView(this).apply {
-            text = "Max Combo v$ver"
-            textSize = 8.5f
-            setTextColor(0xFF333333.toInt())
-            setPadding(8, 2, 8, 0)
-        }, matchW)
-        // Target picker: choose the clearing goal the solver should satisfy.
-        val targetSpinner = android.widget.Spinner(this)
-        val presetLabels = OrbPresets.all.map { it.label }
-        val spinnerAdapter = android.widget.ArrayAdapter(
-            this, android.R.layout.simple_spinner_item, presetLabels,
-        )
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        targetSpinner.adapter = spinnerAdapter
-        targetSpinner.onItemSelectedListener =
-            object : android.widget.AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    parent: android.widget.AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    id: Long,
-                ) {
-                    currentTarget = OrbPresets.all[position]
-                }
-                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
-            }
-        col.addView(targetSpinner, matchW)
+        val kd = resources.displayMetrics.density
 
-        // Search-effort picker: 轻松 3 / 标准 7 / 深入 12.
-        val levelSpinner = android.widget.Spinner(this)
-        val levelLabels = listOf("轻松", "标准", "深入")
-        val levelAdapter = android.widget.ArrayAdapter(
-            this, android.R.layout.simple_spinner_item, levelLabels,
-        )
-        levelAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        levelSpinner.adapter = levelAdapter
-        levelSpinner.setSelection(1)
-        levelSpinner.onItemSelectedListener =
-            object : android.widget.AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    parent: android.widget.AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    id: Long,
-                ) {
-                    currentComplexity = intArrayOf(3, 7, 12)[position]
-                }
-                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
-            }
-        col.addView(levelSpinner, matchW)
+        analyzeBtn = Button(this).apply {
+            text = "分析"
+            textSize = 12f
+            setBackgroundResource(R.drawable.btn_gray)
+            setTextColor(0xFF222222.toInt())
+            stateListAnimator = null
+            minHeight = 0
+            minWidth = 0
+            setAllCaps(false)
+            val s = (56 * kd).toInt()
+            layoutParams = FrameLayout.LayoutParams(s, s)
+            setOnClickListener { analyze() }
+        }
+        col.addView(analyzeBtn)
 
-        // Result line refreshed after each analysis.
         resultView = android.widget.TextView(this).apply {
-            text = "Combo - · 步数 - · 消 -"
+            text = "—"
             textSize = 9f
-            setTextColor(0xFF333333.toInt())
-            setPadding(8, 2, 8, 2)
-        }
-        col.addView(resultView, matchW)
-
-        fun grayButton(label: String, size: Float, onClick: () -> Unit) =
-            Button(this).apply {
-                text = label
-                textSize = size
-                setBackgroundResource(R.drawable.btn_gray)
-                setTextColor(0xFF222222.toInt())
-                stateListAnimator = null
-                minHeight = 0
-                minWidth = 0
-                setAllCaps(false)
-                setPadding(10, 4, 10, 4)
-                setOnClickListener { onClick() }
-            }
-
-        val clearStartBtn = grayButton("清除起点", 11f) { fixedStart = -1 }
-        col.addView(clearStartBtn, matchW)
-
-        val analyzeBtn = grayButton("分析", 11f) { analyze() }
-        this@PadService.analyzeBtn = analyzeBtn
-        col.addView(analyzeBtn, matchW)
-
-        // Close button: tears down the whole assistant (removes every overlay,
-        // stops the foreground service).
-        val closeBtn = grayButton("关闭", 11f) { teardown() }
-        col.addView(closeBtn, matchW)
-
-        val sp = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-
-        fun label(text: String): android.widget.TextView = android.widget.TextView(this).apply {
-            this.text = text
-            textSize = 11f
-            setTextColor(android.graphics.Color.WHITE)
+            setTextColor(0xFFEEEEEE.toInt())
             setBackgroundColor(0xAA000000.toInt())
-            setPadding(8, 4, 8, 4)
+            setPadding(6, 3, 6, 3)
         }
+        col.addView(resultView)
 
-        // Opacity slider: 80 (light) .. 255 (solid). Persisted and applied live.
-        col.addView(label("透明度"), matchW)
-        val alphaBar = android.widget.SeekBar(this).apply {
-            max = 175
-            progress = sp.getInt(KEY_ALPHA, 245) - 80
-            setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(s: android.widget.SeekBar?, p: Int, fromUser: Boolean) {
-                    val a = p + 80
-                    view.routeAlpha = a
-                    view.invalidate()
-                    sp.edit().putInt(KEY_ALPHA, a).apply()
-                }
-                override fun onStartTrackingTouch(s: android.widget.SeekBar?) {}
-                override fun onStopTrackingTouch(s: android.widget.SeekBar?) {}
-            })
+        val closeBtn = Button(this).apply {
+            text = "×"
+            textSize = 14f
+            setBackgroundResource(R.drawable.btn_gray)
+            setTextColor(0xFF222222.toInt())
+            stateListAnimator = null
+            minHeight = 0
+            minWidth = 0
+            val s = (30 * kd).toInt()
+            layoutParams = FrameLayout.LayoutParams(s, s).apply { topMargin = (6 * kd).toInt() }
+            setOnClickListener { teardown() }
         }
-        col.addView(alphaBar, matchW)
+        col.addView(closeBtn)
 
-        bar.background = getDrawable(R.drawable.panel_bg)
-        val pad = (8 * panelKd).toInt()
-        bar.setPadding(pad, pad, pad, pad)
-        bar.addView(col, FrameLayout.LayoutParams(
-            panelW,
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-        ))
+        bar.addView(col)
         val barParams = WindowManager.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
@@ -397,7 +317,7 @@ class PadService : Service() {
         )
         barParams.gravity = Gravity.TOP or Gravity.END
         barParams.x = 8
-        barParams.y = 40
+        barParams.y = 48
         windowManager.addView(bar, barParams)
 
         // --- Standalone colour key window, fixed at the screen's top-left corner,
@@ -508,5 +428,7 @@ class PadService : Service() {
 
         const val PREFS = "maxcombo_calibration"
         const val KEY_ALPHA = "route_alpha"
+        const val KEY_TARGET = "target_index"
+        const val KEY_LEVEL = "effort_level"
     }
 }

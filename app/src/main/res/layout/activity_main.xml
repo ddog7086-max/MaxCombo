@@ -63,17 +63,41 @@
                 android:background="#FFFFFF"
                 android:layout_marginBottom="16dp" />
 
-            <com.example.maxcombo.overlay.RouteBoardView
-                android:id="@+id/preview"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="目标模式"
+                android:textColor="@color/textTitle"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp" />
+
+            <Spinner
+                android:id="@+id/targetSpinner"
                 android:layout_width="match_parent"
-                android:layout_height="220dp"
-                android:background="#1A000000"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="计算量"
+                android:textColor="@color/textTitle"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <Spinner
+                android:id="@+id/levelSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="开启后，直接拖动悬浮框对准 6x5 珠阵；框住珠子即可，无需精确。在预览图上点一格可手设起点。"
+                android:text="开启后，游戏内右上角只会留一个极小「分析」钮：点它抓帧识别盘面，再照着路线拖珠。"
                 android:textColor="@color/textBody"
                 android:textSize="15sp"
                 android:lineSpacingExtra="6dp"
