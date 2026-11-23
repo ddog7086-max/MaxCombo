@@ -115,6 +115,8 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
             .setPositiveButton("关闭", null)
             .show()
     }
+
+    private fun ensureNotificationPermissionThenStart() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val granted = ContextCompat.checkSelfPermission(
                 this, Manifest.permission.POST_NOTIFICATIONS,
