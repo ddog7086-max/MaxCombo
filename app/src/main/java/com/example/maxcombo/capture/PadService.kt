@@ -324,10 +324,10 @@ class PadService : Service() {
         // touch-through: never sits inside the route box or covers an orb.
         val keyView = ColorKeyView(this)
         val keyBar = FrameLayout(this)
-        val kd = resources.displayMetrics.density
+        val keyKd = resources.displayMetrics.density
         keyBar.addView(
             keyView,
-            FrameLayout.LayoutParams((162 * kd).toInt(), (66 * kd).toInt()),
+            FrameLayout.LayoutParams((162 * keyKd).toInt(), (66 * keyKd).toInt()),
         )
         val keyParams = WindowManager.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT,
