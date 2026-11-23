@@ -257,18 +257,18 @@ class PadService : Service() {
             orientation = android.widget.LinearLayout.VERTICAL
         }
         val panelKd = resources.displayMetrics.density
-        val panelW = (165 * panelKd).toInt()
+        val panelW = (132 * panelKd).toInt()
         val matchW = android.widget.LinearLayout.LayoutParams(
             android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
             android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { topMargin = (6 * panelKd).toInt() }
+        ).apply { topMargin = (4 * panelKd).toInt() }
         // Version tag so the user can confirm the installed build at a glance.
         val ver = try {
             packageManager.getPackageInfo(packageName, 0).versionName
         } catch (e: Exception) { "?" }
         col.addView(android.widget.TextView(this).apply {
             text = "Max Combo v$ver"
-            textSize = 9f
+            textSize = 8.5f
             setTextColor(0xFF333333.toInt())
             setPadding(8, 2, 8, 0)
         }, matchW)
@@ -320,7 +320,7 @@ class PadService : Service() {
         // Result line refreshed after each analysis.
         resultView = android.widget.TextView(this).apply {
             text = "Combo - · 步数 - · 消 -"
-            textSize = 10f
+            textSize = 9f
             setTextColor(0xFF333333.toInt())
             setPadding(8, 2, 8, 2)
         }
@@ -336,20 +336,20 @@ class PadService : Service() {
                 minHeight = 0
                 minWidth = 0
                 setAllCaps(false)
-                setPadding(12, 6, 12, 6)
+                setPadding(10, 4, 10, 4)
                 setOnClickListener { onClick() }
             }
 
-        val clearStartBtn = grayButton("清除起点", 12f) { fixedStart = -1 }
+        val clearStartBtn = grayButton("清除起点", 11f) { fixedStart = -1 }
         col.addView(clearStartBtn, matchW)
 
-        val analyzeBtn = grayButton("分析", 12f) { analyze() }
+        val analyzeBtn = grayButton("分析", 11f) { analyze() }
         this@PadService.analyzeBtn = analyzeBtn
         col.addView(analyzeBtn, matchW)
 
         // Close button: tears down the whole assistant (removes every overlay,
         // stops the foreground service).
-        val closeBtn = grayButton("关闭", 12f) { teardown() }
+        val closeBtn = grayButton("关闭", 11f) { teardown() }
         col.addView(closeBtn, matchW)
 
         val sp = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -381,7 +381,7 @@ class PadService : Service() {
         col.addView(alphaBar, matchW)
 
         bar.background = getDrawable(R.drawable.panel_bg)
-        val pad = (10 * panelKd).toInt()
+        val pad = (8 * panelKd).toInt()
         bar.setPadding(pad, pad, pad, pad)
         bar.addView(col, FrameLayout.LayoutParams(
             panelW,

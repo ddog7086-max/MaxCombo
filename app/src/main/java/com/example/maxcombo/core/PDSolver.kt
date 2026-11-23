@@ -169,9 +169,10 @@ object PDSolver {
                 }
 
                 if (candidate.size < 2) return@repeat
-                // Reject tight short loops / knots (a cell revisited within a few
-                // steps); long detour revisits that help clear orbs are kept.
-                if (hasShortLoop(candidate)) return@repeat
+                // Self-avoiding walk: never revisit a cell. Reusing a cell stacks
+                // several line segments on the same orb and knots the route; a
+                // no-repeat path spreads out row-by-row instead.
+                if (candidate.toSet().size != candidate.size) return@repeat
                 val (score, combos) = evaluate(board, candidate, target)
                 val delta = score - currentScore
                 if (delta >= 0 || rng.nextUnit() < exp(delta / max(temperature, 1e-6))) {
