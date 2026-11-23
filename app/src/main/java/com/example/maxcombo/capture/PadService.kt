@@ -269,8 +269,8 @@ class PadService : Service() {
         col.addView(android.widget.TextView(this).apply {
             text = "Max Combo v$ver"
             textSize = 10f
-            setTextColor(0xFFCCCCCC.toInt())
-            setPadding(8, 2, 8, 2)
+            setTextColor(0xFF333333.toInt())
+            setPadding(8, 4, 8, 2)
         }, matchW)
         // Target picker: choose the clearing goal the solver should satisfy.
         val targetSpinner = android.widget.Spinner(this)
@@ -321,35 +321,33 @@ class PadService : Service() {
         resultView = android.widget.TextView(this).apply {
             text = "Combo - · 步数 - · 消 -"
             textSize = 11f
-            setTextColor(0xFFCCCCCC.toInt())
+            setTextColor(0xFF333333.toInt())
             setPadding(8, 4, 8, 4)
         }
         col.addView(resultView, matchW)
 
-        val clearStartBtn = Button(this).apply {
-            text = "清除起点"
-            textSize = 13f
-            setOnClickListener { fixedStart = -1 }
-        }
+        fun grayButton(label: String, size: Float, onClick: () -> Unit) =
+            Button(this).apply {
+                text = label
+                textSize = size
+                backgroundResource = R.drawable.btn_gray
+                setTextColor(0xFF222222.toInt())
+                stateListAnimator = null
+                setAllCaps(false)
+                setPadding(24, 10, 24, 10)
+                setOnClickListener { onClick() }
+            }
+
+        val clearStartBtn = grayButton("清除起点", 13f) { fixedStart = -1 }
         col.addView(clearStartBtn, matchW)
 
-        val analyzeBtn = Button(this).apply {
-            text = "分析"
-            textSize = 14f
-            setPadding(28, 8, 28,  8)
-            setOnClickListener { analyze() }
-        }
+        val analyzeBtn = grayButton("分析", 14f) { analyze() }
         this@PadService.analyzeBtn = analyzeBtn
         col.addView(analyzeBtn, matchW)
 
         // Close button: tears down the whole assistant (removes every overlay,
         // stops the foreground service).
-        val closeBtn = Button(this).apply {
-            text = "关闭"
-            textSize = 14f
-            setPadding(28, 8, 28, 8)
-            setOnClickListener { teardown() }
-        }
+        val closeBtn = grayButton("关闭", 14f) { teardown() }
         col.addView(closeBtn, matchW)
 
         val sp = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -380,6 +378,9 @@ class PadService : Service() {
         }
         col.addView(alphaBar, matchW)
 
+        bar.background = getDrawable(R.drawable.panel_bg)
+        val pad = (10 * panelKd).toInt()
+        bar.setPadding(pad, pad, pad, pad)
         bar.addView(col, FrameLayout.LayoutParams(
             panelW,
             FrameLayout.LayoutParams.WRAP_CONTENT,

@@ -83,7 +83,9 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
                 ensureNotificationPermissionThenStart()
             }
         }
-        findViewById<Button>(R.id.btnHelp).setOnClickListener { showHelp() }
+        val helpLink = findViewById<TextView>(R.id.btnHelp)
+        helpLink.paintFlags = helpLink.paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
+        helpLink.setOnClickListener { showHelp() }
     }
 
     private fun showHelp() {
