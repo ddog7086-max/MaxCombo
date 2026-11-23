@@ -1,7 +1,10 @@
 package com.example.maxcombo
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Button
@@ -20,6 +23,19 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
     private lateinit var preview: RouteBoardView
     private lateinit var toggleBtn: Button
     private var versionName = ""
+
+    // Android 13+ requires a runtime notification permission; without it the
+    // foreground capture service cannot start and screen capture fails with a
+    // permission error on newer devices.
+    private val notifPermLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            startHelper()
+        } else {
+            Toast.makeText(this, "未授予通知权限，录屏服务可能无法启动", Toast.LENGTH_LONG).show()
+        }
+    }
 
     private val projectionLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
@@ -56,9 +72,22 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
                 stopService(Intent(this, PadService::class.java))
                 setRunning(false)
             } else {
-                startHelper()
+                ensureNotificationPermissionThenStart()
             }
         }
+    }
+
+    private fun ensureNotificationPermissionThenStart() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                this, Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                return
+            }
+        }
+        startHelper()
     }
 
     private fun startHelper() {
@@ -80,9 +109,9 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
         val ver = if (versionName.isNotEmpty()) "v$versionName  " else ""
         toggleBtn.text = if (running) "停止助手" else "开启助手"
         statusText.text = if (running) {
-            "${ver}运行中：点「对准」拖框包住珠子，再退出即可拖珠。"
+            "${ver}运行中：点「分析」抓帧识别盘面，再照着路线拖珠。"
         } else {
-            "${ver}未开启。先授予悬浮窗权限，再点「开启助手」允许屏幕录制。"
+            "${ver}未开启。先授予通知与悬浮窗权限，再点「开启助手」允许屏幕录制。"
         }
     }
 
