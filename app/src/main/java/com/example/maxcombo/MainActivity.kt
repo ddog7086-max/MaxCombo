@@ -83,9 +83,38 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
                 ensureNotificationPermissionThenStart()
             }
         }
+        findViewById<Button>(R.id.btnHelp).setOnClickListener { showHelp() }
     }
 
-    private fun ensureNotificationPermissionThenStart() {
+    private fun showHelp() {
+        val text = """
+            【用法】
+            1. 打开 P&D 进到转珠回合。
+            2. 点「开启助手」，允许通知与屏幕录制。
+            3. 悬浮栏选目标、计算量，点「分析」抓帧，照路线拖珠。
+
+            【目标模式】
+            · 最大 Combo：默认，追求最多 combo。
+            · 火/水/木/光/闇 N 颗：第一波消够指定颗数。
+            · 横排 / 十字：排成一整行 / 十字形。
+            · 固定 5 色：火水木光闇各消一组。
+
+            【手设起点】
+            在主界面预览图上点想开始的那一格，路线就从该格起；
+            悬浮栏「清除起点」恢复自动。
+
+            【FAQ】
+            · 识别错色：换主题/机型后颜色可能要重调，尽量在明亮盘面分析。
+            · 实际 combo 比显示多：路线只算这一步能确定的，不含天空掉落。
+            · 权限报错：先允许通知权限，再给悬浮窗与录屏权限。
+            · 这是外部练习工具，不读游戏内存、不注入，账号风险自担。
+        """.trimIndent()
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("说明 / FAQ")
+            .setMessage(text)
+            .setPositiveButton("关闭", null)
+            .show()
+    }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val granted = ContextCompat.checkSelfPermission(
                 this, Manifest.permission.POST_NOTIFICATIONS,
