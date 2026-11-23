@@ -88,7 +88,10 @@ object OrbRecognizer {
      */
     private fun hueBand(h: Double): Int = when {
         h >= 305 && h <= 350 -> Orb.HEART
-        h < 42 || h >= 345 -> Orb.FIRE
+        // Pure red fire sits near h7; yellow light sits near h43. The old h<42
+        // cutoff swallowed the yellow orbs into fire, so fire stops at h30 and
+        // everything 30..75 is light.
+        h < 30 || h >= 345 -> Orb.FIRE
         h < 75 -> Orb.LIGHT
         h >= 95 && h <= 150 -> Orb.WOOD
         h >= 190 && h <= 235 -> Orb.WATER
