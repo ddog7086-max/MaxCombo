@@ -47,6 +47,8 @@ class PadService : Service() {
 
     interface Listener {
         fun onBoard(board: PDBoard, route: PDRoute)
+        /** Fired when the service starts and its overlay is up. */
+        fun onStarted() {}
         /** Fired when the service tears itself down (power button / stop). */
         fun onStopped() {}
     }
@@ -146,6 +148,7 @@ class PadService : Service() {
             }, mainHandler)
             startCapture()
             addOverlay()
+            listener?.onStarted()
             // Static frame mode: no continuous polling. The user taps 分析 to
             // grab one frame, recognise it and draw the route once.
         }

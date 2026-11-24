@@ -204,7 +204,9 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
     override fun onResume() {
         super.onResume()
         PadService.instance?.setListener(this)
-        setRunning(PadService.instance != null)
+        // Only refresh to running when the service already exists; do not force
+        // "stopped" here, which would race with the async start and flip it back.
+        if (PadService.instance != null) setRunning(true)
     }
 
     override fun onPause() {
@@ -214,6 +216,10 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
 
     override fun onBoard(board: PDBoard, route: PDRoute) {
         // Route is drawn by the in-game overlay; nothing to render on the main screen.
+    }
+
+    override fun onStarted() {
+        setRunning(true)
     }
 
     override fun onStopped() {
