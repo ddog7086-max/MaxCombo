@@ -141,7 +141,7 @@ object PDSolver {
                     bestPath = path
                 }
             }
-            beams = keep.map { it.first to it.second }
+            beams = keep.map { it to 0 }
         }
         return bestPath to bestCombos
     }
