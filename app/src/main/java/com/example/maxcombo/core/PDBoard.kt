@@ -143,8 +143,24 @@ class PDBoard(val cells: IntArray) {
         repeat(64) {
             val matched = runs()
             if (matched.isEmpty()) return ResolveResult(combos, cleared)
-            combos += matched.size
+            // A single orb belongs to only one cleared group at once. When a
+            // horizontal run and a vertical run only touch / share an end cell
+            // (not a true cross), they are NOT two independent combos. Keep a
+            // maximal set of mutually disjoint runs (greedy) and count/clear
+            // only those; disjoint runs are all counted exactly as before.
+            val chosen = ArrayList<List<Int>>(matched.size)
+            val used = HashSet<Int>()
             for (run in matched) {
+                var overlap = false
+                for (i in run) {
+                    if (i in used) { overlap = true; break }
+                }
+                if (overlap) continue
+                chosen.add(run)
+                for (i in run) used.add(i)
+            }
+            combos += chosen.size
+            for (run in chosen) {
                 cleared += run.size
                 for (i in run) cells[i] = Orb.EMPTY
             }
