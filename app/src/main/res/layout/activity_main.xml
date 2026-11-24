@@ -97,6 +97,65 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="各色优先（無効 / 並 / 優先）"
+                android:textColor="@color/textTitle"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp" />
+
+            <!-- Per-colour priority sliders: 0=無効 1=並 2=優先 -->
+            <LinearLayout android:id="@+id/priorityRowFire" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                <TextView android:layout_width="40dp" android:layout_height="wrap_content" android:text="火" android:textColor="#E05548" android:textSize="15sp" android:textStyle="bold" />
+                <SeekBar android:id="@+id/priorityFire" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:max="2" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/priorityRowWater" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                <TextView android:layout_width="40dp" android:layout_height="wrap_content" android:text="水" android:textColor="#4A90E2" android:textSize="15sp" android:textStyle="bold" />
+                <SeekBar android:id="@+id/priorityWater" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:max="2" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/priorityRowWood" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                <TextView android:layout_width="40dp" android:layout_height="wrap_content" android:text="木" android:textColor="#66C266" android:textSize="15sp" android:textStyle="bold" />
+                <SeekBar android:id="@+id/priorityWood" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:max="2" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/priorityRowLight" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                <TextView android:layout_width="40dp" android:layout_height="wrap_content" android:text="光" android:textColor="#F0D048" android:textSize="15sp" android:textStyle="bold" />
+                <SeekBar android:id="@+id/priorityLight" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:max="2" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/priorityRowDark" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                <TextView android:layout_width="40dp" android:layout_height="wrap_content" android:text="闇" android:textColor="#9E58C8" android:textSize="15sp" android:textStyle="bold" />
+                <SeekBar android:id="@+id/priorityDark" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:max="2" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/priorityRowHeart" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                <TextView android:layout_width="40dp" android:layout_height="wrap_content" android:text="心" android:textColor="#F08098" android:textSize="15sp" android:textStyle="bold" />
+                <SeekBar android:id="@+id/priorityHeart" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:max="2" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="計算量（高速 ←→ 高品質）"
+                android:textColor="@color/textTitle"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+            <SeekBar android:id="@+id/qualityBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="2" android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="移動（少なめ ←→ 多め）"
+                android:textColor="@color/textTitle"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+            <SeekBar android:id="@+id/moveBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="2" android:layout_marginBottom="8dp" />
+
+            <CheckBox android:id="@+id/attackCheck" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="全体攻撃（优先整排大量消）" android:textColor="@color/textBody" android:textSize="15sp" />
+            <CheckBox android:id="@+id/comboCheck" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="コンボ優先（优先最大连击，默认）" android:textColor="@color/textBody" android:textSize="15sp" android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:text="路线透明度"
                 android:textColor="@color/textTitle"
                 android:textSize="15sp"

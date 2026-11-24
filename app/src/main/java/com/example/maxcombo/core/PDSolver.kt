@@ -53,8 +53,9 @@ object PDSolver {
         // Deterministic beam search (PuzzCombo-style scored expansion + beam
         // pruning + self-avoid dedup) instead of random SA: it systematically
         // grows simple non-crossing paths and keeps the highest-combo one, so
-        // the route never knots itself.
-        val (beamPath, _) = beamSearch(board, maxLen, level, target, fixedStart)
+        // the route never knots itself. Beam width follows 計算量 (quality).
+        val quality = SolverSettings.quality
+        val (beamPath, _) = beamSearch(board, maxLen, level, target, fixedStart, quality)
         // Beam gives a strong non-knotting seed; run a bounded SA local polish on
         // top to escape its local 5-6 combo optimum and find the extra waves.
         val rng = SplitMix64(seed)
@@ -93,12 +94,15 @@ object PDSolver {
         level: Int,
         target: OrbTarget,
         fixedStart: Int,
+        quality: Int,
     ): Pair<List<Int>, Int> {
-        val width = when {
+        // 計算量: 高速=窄 beam, 高品質=宽 beam (×1 基準, ×1.6 高品質).
+        val baseWidth = when {
             level >= 10 -> 800
             level >= 6 -> 450
             else -> 180
         }
+        val width = (baseWidth * (0.7 + quality * 0.3)).toInt()
         val starts = if (fixedStart in 0 until PDBoard.CELL_COUNT) listOf(fixedStart)
             else (0 until PDBoard.CELL_COUNT).toList()
 
@@ -289,11 +293,37 @@ object PDSolver {
     ): Pair<Double, Int> {
         val after = board.dragged(along = path)
         val st = after.resolveStats()
+        val fw = after.firstWave()
         // Max-combo is the primary goal: every extra combo scores high and
         // monotonically beats fewer combos (no artificial 5..7 lock window).
         // Cleared orbs only give a small supporting bonus; they never outrank
         // an extra combo. Goal presets keep their large match bonus.
-        val targetBonus = if (target.matches(after.firstWave())) 300.0 else 0.0
+        val targetBonus = if (target.matches(fw)) 300.0 else 0.0
+
+        // PuzzCombo per-colour priority (無効/並/優先): a preferred colour's
+        // first-wave clears earn extra weight; 並 gives a small nudge.
+        var priorityBonus = 0.0
+        for (color in 0 until 6) {
+            val n = fw.colorCount(color)
+            when (SolverSettings.colorPriority[color]) {
+                SolverSettings.PRIORITY_PREFERRED -> priorityBonus += n * 12.0
+                SolverSettings.PRIORITY_NORMAL -> priorityBonus += n * 4.0
+                else -> {}
+            }
+        }
+
+        // 全体攻撃 mode: reward a full horizontal row in the first wave and a
+        // large mass clear; コンボ優先 mode keeps combos dominant.
+        var attackBonus = 0.0
+        if (SolverSettings.attackMode) {
+            if (fw.horizontalColor >= 0) attackBonus += 60.0
+            attackBonus += st.cleared * 2.0
+        }
+
+        // 移動 (少なめ..多め): nudge route length. 少なめ prefers short,
+        // 多め tolerates a longer route; tiny vs one combo.
+        val moveBias = (SolverSettings.moveBias - 1) * 0.3
+
         // Count direction changes (turns). A small per-turn penalty prefers a
         // plain, straight, non-zigzag route over one that shuttles left-right;
         // tiny vs one extra combo so combos still dominate.
@@ -306,7 +336,8 @@ object PDSolver {
             if (d1r != d2r || d1c != d2c) turns++
         }
         val score = st.combos * 100.0 + st.cleared * 8.0 +
-            targetBonus + path.size * 0.15 - turns * 1.0
+            targetBonus + priorityBonus + attackBonus +
+            path.size * (0.15 + moveBias) - turns * 1.0
         return Pair(score, st.combos)
     }
 

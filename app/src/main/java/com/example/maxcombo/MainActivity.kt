@@ -105,6 +105,63 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
                 override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
             }
 
+        // PuzzCombo-style solver settings: per-colour priority, quality, move
+        // bias, and 全体攻撃 / コンボ優先 mode. Loaded from prefs, saved live.
+        com.example.maxcombo.core.SolverSettings.load(this)
+        val prioBars = listOf(
+            findViewById<android.widget.SeekBar>(R.id.priorityFire),
+            findViewById(R.id.priorityWater),
+            findViewById(R.id.priorityWood),
+            findViewById(R.id.priorityLight),
+            findViewById(R.id.priorityDark),
+            findViewById(R.id.priorityHeart),
+        )
+        prioBars.forEachIndexed { i, bar ->
+            bar.progress = com.example.maxcombo.core.SolverSettings.colorPriority[i]
+            bar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(s: android.widget.SeekBar?, p: Int, fromUser: Boolean) {
+                    com.example.maxcombo.core.SolverSettings.colorPriority[i] = p
+                    com.example.maxcombo.core.SolverSettings.save(this@MainActivity)
+                }
+                override fun onStartTrackingTouch(s: android.widget.SeekBar?) {}
+                override fun onStopTrackingTouch(s: android.widget.SeekBar?) {}
+            })
+        }
+        val qualityBar = findViewById<android.widget.SeekBar>(R.id.qualityBar)
+        qualityBar.progress = com.example.maxcombo.core.SolverSettings.quality
+        qualityBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: android.widget.SeekBar?, p: Int, fromUser: Boolean) {
+                com.example.maxcombo.core.SolverSettings.quality = p
+                com.example.maxcombo.core.SolverSettings.save(this@MainActivity)
+            }
+            override fun onStartTrackingTouch(s: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(s: android.widget.SeekBar?) {}
+        })
+        val moveBar = findViewById<android.widget.SeekBar>(R.id.moveBar)
+        moveBar.progress = com.example.maxcombo.core.SolverSettings.moveBias
+        moveBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: android.widget.SeekBar?, p: Int, fromUser: Boolean) {
+                com.example.maxcombo.core.SolverSettings.moveBias = p
+                com.example.maxcombo.core.SolverSettings.save(this@MainActivity)
+            }
+            override fun onStartTrackingTouch(s: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(s: android.widget.SeekBar?) {}
+        })
+        val attackCheck = findViewById<android.widget.CheckBox>(R.id.attackCheck)
+        val comboCheck = findViewById<android.widget.CheckBox>(R.id.comboCheck)
+        attackCheck.isChecked = com.example.maxcombo.core.SolverSettings.attackMode
+        comboCheck.isChecked = !com.example.maxcombo.core.SolverSettings.attackMode
+        attackCheck.setOnCheckedChangeListener { _, c ->
+            com.example.maxcombo.core.SolverSettings.attackMode = c
+            comboCheck.isChecked = !c
+            com.example.maxcombo.core.SolverSettings.save(this)
+        }
+        comboCheck.setOnCheckedChangeListener { _, c ->
+            com.example.maxcombo.core.SolverSettings.attackMode = !c
+            attackCheck.isChecked = !c
+            com.example.maxcombo.core.SolverSettings.save(this)
+        }
+
         // Route opacity slider: 80 (light) .. 255 (solid), persisted & live.
         val alphaBar = findViewById<android.widget.SeekBar>(R.id.alphaBar)
         alphaBar.progress = sp.getInt(PadService.KEY_ALPHA, 245) - 80
