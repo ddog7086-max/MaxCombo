@@ -112,8 +112,12 @@ object PDSolver {
             for ((path, _) in beams) {
                 val last = path.last()
                 for (nb in neighbourIndicesOf(last)) {
-                    if (nb in path) continue // self-avoid: never revisit a cell
+                    // The route may weave through a cell again (detour / crossing);
+                    // only forbid the immediate about-turn and a tight short loop
+                    // that knots the line.
+                    if (path.size >= 2 && nb == path[path.size - 2]) continue
                     val np = path + nb
+                    if (hasShortLoop(np)) continue
                     val after = board.dragged(np)
                     val st = after.resolveStats()
                     val bonus = if (target.matches(after.firstWave())) 300 else 0
@@ -208,7 +212,7 @@ object PDSolver {
                         if (room >= 1) {
                             val extra = rng.nextInt(1, room + 1)
                             val tail = randomPathFrom(
-                                head[head.size - 1], extra, maxLen, rng, head.toSet(),
+                                head[head.size - 1], extra, maxLen, rng,
                             )
                             candidate = head + tail.drop(1)
                         } else {
@@ -255,10 +259,9 @@ object PDSolver {
                 }
 
                 if (candidate.size < 2) return@repeat
-                // Self-avoiding walk: never revisit a cell. Reusing a cell stacks
-                // several line segments on the same orb and knots the route; a
-                // no-repeat path spreads out row-by-row instead.
-                if (candidate.toSet().size != candidate.size) return@repeat
+                // The route may weave through a cell again; only reject a tight
+                // short loop that knots the line.
+                if (hasShortLoop(candidate)) return@repeat
                 val (score, combos) = evaluate(board, candidate, target)
                 val delta = score - currentScore
                 if (delta >= 0 || rng.nextUnit() < exp(delta / max(temperature, 1e-6))) {
