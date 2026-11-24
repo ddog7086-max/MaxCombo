@@ -204,13 +204,20 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
     override fun onResume() {
         super.onResume()
         PadService.instance?.setListener(this)
-        // Only refresh to running when the service already exists; do not force
-        // "stopped" here, which would race with the async start and flip it back.
-        if (PadService.instance != null) setRunning(true)
+        // instance present -> running; gone -> back to idle. The async start race is
+        // covered by onStarted() firing once the overlay actually comes up.
+        setRunning(PadService.instance != null)
     }
 
     override fun onPause() {
         super.onPause()
+        // Do NOT clear the listener here: the user switches to the game and taps
+        // the power button while this Activity is paused, and onStopped() must
+        // still reach it. Only detach on destroy.
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
         PadService.instance?.setListener(null)
     }
 

@@ -54,10 +54,30 @@ object PDSolver {
         // pruning + self-avoid dedup) instead of random SA: it systematically
         // grows simple non-crossing paths and keeps the highest-combo one, so
         // the route never knots itself.
-        val (bestPath, _) = beamSearch(board, maxLen, level, target, fixedStart)
-        // Re-evaluate the kept path independently so the displayed counts always
-        // match the route actually drawn.
-        val st = board.dragged(along = bestPath).resolveStats()
+        val (beamPath, _) = beamSearch(board, maxLen, level, target, fixedStart)
+        // Beam gives a strong non-knotting seed; run a bounded SA local polish on
+        // top to escape its local 5-6 combo optimum and find the extra waves.
+        val rng = SplitMix64(seed)
+        val budget = when {
+            level >= 10 -> 3000
+            level >= 6 -> 1800
+            else -> 900
+        }
+        val restarts = when {
+            level >= 10 -> 5
+            level >= 6 -> 3
+            else -> 2
+        }
+        val (_, saPath, _) = saOnce(board, rng, maxLen, budget, restarts, target, fixedStart)
+
+        // Keep whichever route truly yields more combos (tie-break by cleared).
+        fun statOf(path: List<Int>) = board.dragged(along = path).resolveStats()
+        val beamR = statOf(beamPath)
+        val saR = statOf(saPath)
+        val bestPath = if (saR.combos > beamR.combos ||
+            (saR.combos == beamR.combos && saR.cleared > beamR.cleared)
+        ) saPath else beamPath
+        val st = statOf(bestPath)
         return PDRoute(bestPath, st.combos, st.cleared)
     }
 
@@ -75,9 +95,9 @@ object PDSolver {
         fixedStart: Int,
     ): Pair<List<Int>, Int> {
         val width = when {
-            level >= 10 -> 500
-            level >= 6 -> 300
-            else -> 120
+            level >= 10 -> 800
+            level >= 6 -> 450
+            else -> 180
         }
         val starts = if (fixedStart in 0 until PDBoard.CELL_COUNT) listOf(fixedStart)
             else (0 until PDBoard.CELL_COUNT).toList()
@@ -87,7 +107,8 @@ object PDSolver {
         var bestCombos = 0
 
         for (depth in 1..maxLen) {
-            val candidates = ArrayList<Pair<List<Int>, Int>>()
+            // path -> score -> combos
+            val candidates = ArrayList<Triple<List<Int>, Int, Int>>()
             for ((path, _) in beams) {
                 val last = path.last()
                 for (nb in neighbourIndicesOf(last)) {
@@ -101,22 +122,26 @@ object PDSolver {
                     // instead of being pruned as zero-score early paths.
                     val pairs = countAdjacentPairs(after)
                     val score = st.combos * 100 + st.cleared * 8 + pairs * 2 + bonus
-                    candidates.add(np to score)
+                    candidates.add(Triple(np, score, st.combos))
                 }
             }
             if (candidates.isEmpty()) break
-            val kept = candidates
-                .distinctBy { it.first }
-                .sortedByDescending { it.second }
-                .take(width)
-            for ((path, _) in kept) {
+            val distinct = candidates.distinctBy { it.first }
+            val bestSeen = distinct.maxOf { it.third }
+            val keep = LinkedHashSet<List<Int>>()
+            // Top-scored window, plus an elite band: every path within one combo of
+            // the best seen survives, so a near-optimal long route is never pruned
+            // just because its raw score ranks below a shorter early-mature one.
+            distinct.sortedByDescending { it.second }.take(width).forEach { keep.add(it.first) }
+            distinct.filter { it.third >= bestSeen - 1 }.forEach { keep.add(it.first) }
+            for (path in keep) {
                 val combos = board.dragged(path).resolveStats().combos
                 if (combos > bestCombos || (combos == bestCombos && path.size > bestPath.size)) {
                     bestCombos = combos
                     bestPath = path
                 }
             }
-            beams = kept.map { it.first to it.second }
+            beams = keep.map { it.first to it.second }
         }
         return bestPath to bestCombos
     }
