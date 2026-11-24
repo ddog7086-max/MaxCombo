@@ -47,6 +47,8 @@ class PadService : Service() {
 
     interface Listener {
         fun onBoard(board: PDBoard, route: PDRoute)
+        /** Fired when the service tears itself down (power button / stop). */
+        fun onStopped() {}
     }
 
     @Volatile
@@ -415,6 +417,7 @@ class PadService : Service() {
         projection?.stop()
         projection = null
         stopForeground(STOP_FOREGROUND_REMOVE)
+        listener?.onStopped()
         stopSelf()
     }
 

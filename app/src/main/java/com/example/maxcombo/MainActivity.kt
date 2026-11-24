@@ -204,7 +204,7 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
     override fun onResume() {
         super.onResume()
         PadService.instance?.setListener(this)
-        if (PadService.instance != null) setRunning(true)
+        setRunning(PadService.instance != null)
     }
 
     override fun onPause() {
@@ -214,5 +214,9 @@ class MainActivity : AppCompatActivity(), PadService.Listener {
 
     override fun onBoard(board: PDBoard, route: PDRoute) {
         // Route is drawn by the in-game overlay; nothing to render on the main screen.
+    }
+
+    override fun onStopped() {
+        setRunning(false)
     }
 }
