@@ -75,9 +75,9 @@ object PDSolver {
         fixedStart: Int,
     ): Pair<List<Int>, Int> {
         val width = when {
-            level >= 10 -> 260
-            level >= 6 -> 140
-            else -> 60
+            level >= 10 -> 500
+            level >= 6 -> 300
+            else -> 120
         }
         val starts = if (fixedStart in 0 until PDBoard.CELL_COUNT) listOf(fixedStart)
             else (0 until PDBoard.CELL_COUNT).toList()
@@ -96,7 +96,11 @@ object PDSolver {
                     val after = board.dragged(np)
                     val st = after.resolveStats()
                     val bonus = if (target.matches(after.firstWave())) 300 else 0
-                    val score = st.combos * 100 + st.cleared * 8 + bonus
+                    // Adjacent same-colour pairs are the seeds of 3-matches: before
+                    // any combo appears they keep promising paths alive in the beam
+                    // instead of being pruned as zero-score early paths.
+                    val pairs = countAdjacentPairs(after)
+                    val score = st.combos * 100 + st.cleared * 8 + pairs * 2 + bonus
                     candidates.add(np to score)
                 }
             }
@@ -115,6 +119,20 @@ object PDSolver {
             beams = kept.map { it.first to it.second }
         }
         return bestPath to bestCombos
+    }
+
+    /** Count horizontal/vertical adjacent same-colour pairs (3-match seeds). */
+    private fun countAdjacentPairs(b: PDBoard): Int {
+        var n = 0
+        for (row in 0 until PDBoard.ROWS) {
+            for (col in 0 until PDBoard.COLS) {
+                val v = b.cell(row, col)
+                if (v == Orb.EMPTY) continue
+                if (col + 1 < PDBoard.COLS && b.cell(row, col + 1) == v) n++
+                if (row + 1 < PDBoard.ROWS && b.cell(row + 1, col) == v) n++
+            }
+        }
+        return n
     }
 
     private fun saOnce(
