@@ -141,15 +141,27 @@ class RouteBoardView : View {
             }
             canvas.drawPath(curve, cleanLine)
 
-            // Start: the white end of the line itself, a white filled head seated
-            // right on the first point so it reads as one piece with the route.
-            val start = center(path[0])
-            val dotR = cell * 0.11f
-            val headPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb(a, 255, 255, 255)
+            // Number every visited cell in walk order so the player follows 1→2→3
+            // instead of reading an overlapped bundle of lines.
+            val numBg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb(160, 0, 0, 0)
                 style = Paint.Style.FILL
             }
-            canvas.drawCircle(start[0], start[1], dotR, headPaint)
+            val numPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb(a, 255, 255, 255)
+                textSize = cell * 0.32f
+                textAlign = Paint.Align.CENTER
+                isFakeBoldText = true
+            }
+            for (i in path.indices) {
+                val c = center(path[i])
+                val r = cell * 0.19f
+                canvas.drawCircle(c[0], c[1], r, numBg)
+                canvas.drawText(
+                    (i + 1).toString(), c[0],
+                    c[1] + numPaint.textSize * 0.35f, numPaint,
+                )
+            }
 
             // End: a solid arrowhead whose tip sits exactly on the last point.
             val prev = center(path[path.size - 2])
