@@ -124,40 +124,46 @@ class RouteBoardView : View {
             }
             val cell = minOf(cellW, cellH)
 
-            // PuzzCombo clean style: a SINGLE plain white polyline joining orb
-            // centres. No dual lanes, no outer black pipe, no gradient, no
-            // semicircle fillet — those stacked on top of each other and read as
-            // a messy bundle.
-            val rawPts = ArrayList<FloatArray>()
-            for (i in path.indices) rawPts.add(center(path[i]))
-
-            // Orthogonalise: split any diagonal step into H-then-V so the track
-            // stays on the grid instead of cutting across corners.
-            val pts = ArrayList<FloatArray>()
-            pts.add(rawPts[0])
-            for (i in 1 until rawPts.size) {
-                val p = pts.last()
-                val c = rawPts[i]
-                if (Math.abs(c[0] - p[0]) > 1f && Math.abs(c[1] - p[1]) > 1f) {
-                    pts.add(floatArrayOf(c[0], p[1]))
-                }
-                pts.add(c)
+            // Each grid edge the walk uses; when the route crosses back over the
+            // same edge (weaving / return), draw the repeats as parallel lanes
+            // offset sideways instead of stacking on top of one line.
+            fun edgeKey(u: Int, v: Int): Int =
+                if (u < v) u * 31 + v else v * 31 + u
+            val total = HashMap<Int, Int>()
+            for (i in 0 until path.size - 1) {
+                val k = edgeKey(path[i], path[i + 1])
+                total[k] = (total[k] ?: 0) + 1
             }
-
-            val curve = Path()
-            curve.moveTo(pts[0][0], pts[0][1])
-            for (i in 1 until pts.size) curve.lineTo(pts[i][0], pts[i][1])
-            val cleanLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            val seen = HashMap<Int, Int>()
+            val laneOff = cell * 0.16f
+            val lanePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 strokeWidth = 7f
                 strokeCap = Paint.Cap.ROUND
                 style = Paint.Style.STROKE
                 color = Color.argb(a, 255, 255, 255)
             }
-            canvas.drawPath(curve, cleanLine)
+            for (i in 0 until path.size - 1) {
+                val u = path[i]
+                val v = path[i + 1]
+                val k = edgeKey(u, v)
+                val ch = seen[k] ?: 0
+                seen[k] = ch + 1
+                val n = total[k] ?: 1
+                val off = (ch - (n - 1) / 2f) * laneOff
+                val cu = center(u)
+                val cv = center(v)
+                if (PDBoard.rowOf(u) == PDBoard.rowOf(v)) {
+                    // horizontal edge: offset along y
+                    canvas.drawLine(cu[0], cu[1] + off, cv[0], cv[1] + off, lanePaint)
+                } else {
+                    // vertical edge: offset along x
+                    canvas.drawLine(cu[0] + off, cu[1], cv[0] + off, cv[1], lanePaint)
+                }
+            }
 
             // Start: the white end of the line itself, a white filled head seated
             // right on the first point so it reads as one piece with the route.
-            val start = pts[0]
+            val start = center(path[0])
             val dotR = cell * 0.11f
             val headPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.argb(a, 255, 255, 255)
@@ -165,11 +171,9 @@ class RouteBoardView : View {
             }
             canvas.drawCircle(start[0], start[1], dotR, headPaint)
 
-            // End: a solid BLACK arrowhead whose tip sits exactly on the last
-            // point, rooted into the line tail so it is one piece with the black
-            // end of the gradient (not a floating white triangle).
-            val prev = pts[pts.size - 2]
-            val end = pts.last()
+            // End: a solid arrowhead whose tip sits exactly on the last point.
+            val prev = center(path[path.size - 2])
+            val end = center(path.last())
             val dx = end[0] - prev[0]
             val dy = end[1] - prev[1]
             val len = Math.hypot(dx.toDouble(), dy.toDouble()).toFloat()
