@@ -124,42 +124,22 @@ class RouteBoardView : View {
             }
             val cell = minOf(cellW, cellH)
 
-            // Each grid edge the walk uses; when the route crosses back over the
-            // same edge (weaving / return), draw the repeats as parallel lanes
-            // offset sideways instead of stacking on top of one line.
-            fun edgeKey(u: Int, v: Int): Int =
-                if (u < v) u * 31 + v else v * 31 + u
-            val total = HashMap<Int, Int>()
-            for (i in 0 until path.size - 1) {
-                val k = edgeKey(path[i], path[i + 1])
-                total[k] = (total[k] ?: 0) + 1
+            // Single clean polyline joining orb centres in walk order. Repeated
+            // edges overlap on purpose; parallel lanes only tangled the board.
+            val curve = Path()
+            val p0 = center(path[0])
+            curve.moveTo(p0[0], p0[1])
+            for (i in 1 until path.size) {
+                val c = center(path[i])
+                curve.lineTo(c[0], c[1])
             }
-            val seen = HashMap<Int, Int>()
-            val laneOff = cell * 0.16f
-            val lanePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            val cleanLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 strokeWidth = 7f
                 strokeCap = Paint.Cap.ROUND
                 style = Paint.Style.STROKE
                 color = Color.argb(a, 255, 255, 255)
             }
-            for (i in 0 until path.size - 1) {
-                val u = path[i]
-                val v = path[i + 1]
-                val k = edgeKey(u, v)
-                val ch = seen[k] ?: 0
-                seen[k] = ch + 1
-                val n = total[k] ?: 1
-                val off = (ch - (n - 1) / 2f) * laneOff
-                val cu = center(u)
-                val cv = center(v)
-                if (PDBoard.rowOf(u) == PDBoard.rowOf(v)) {
-                    // horizontal edge: offset along y
-                    canvas.drawLine(cu[0], cu[1] + off, cv[0], cv[1] + off, lanePaint)
-                } else {
-                    // vertical edge: offset along x
-                    canvas.drawLine(cu[0] + off, cu[1], cv[0] + off, cv[1], lanePaint)
-                }
-            }
+            canvas.drawPath(curve, cleanLine)
 
             // Start: the white end of the line itself, a white filled head seated
             // right on the first point so it reads as one piece with the route.
