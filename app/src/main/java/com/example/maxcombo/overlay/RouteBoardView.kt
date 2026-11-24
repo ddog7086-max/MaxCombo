@@ -124,15 +124,18 @@ class RouteBoardView : View {
             }
             val cell = minOf(cellW, cellH)
 
-            // Single clean polyline joining orb centres in walk order. Repeated
-            // edges overlap on purpose; parallel lanes only tangled the board.
+            // PuzzCombo-style flowing smooth curve through the orb centres in
+            // walk order: quadratic Bézier rounds every corner instead of a hard
+            // right-angle polyline.
             val curve = Path()
-            val p0 = center(path[0])
-            curve.moveTo(p0[0], p0[1])
-            for (i in 1 until path.size) {
-                val c = center(path[i])
-                curve.lineTo(c[0], c[1])
+            val pts = path.map { center(it) }
+            curve.moveTo(pts[0][0], pts[0][1])
+            for (i in 1 until pts.size - 1) {
+                val mx = (pts[i][0] + pts[i + 1][0]) / 2f
+                val my = (pts[i][1] + pts[i + 1][1]) / 2f
+                curve.quadTo(pts[i][0], pts[i][1], mx, my)
             }
+            curve.lineTo(pts.last()[0], pts.last()[1])
             val cleanLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 strokeWidth = 7f
                 strokeCap = Paint.Cap.ROUND

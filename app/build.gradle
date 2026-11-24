@@ -11,8 +11,8 @@ android {
         applicationId 'com.example.maxcombo'
         minSdk 26
         targetSdk 34
-        versionCode 28
-        versionName '3.8'
+        versionCode 29
+        versionName '3.9'
     }
 
     // Fixed keystore committed in the repo so every CI build shares the SAME
