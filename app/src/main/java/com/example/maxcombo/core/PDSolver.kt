@@ -49,29 +49,72 @@ object PDSolver {
         // Complexity 0..20 scales search effort (more restarts / budget); high
         // settings run a deeper search to chase a full board clear.
         val level = complexity.coerceIn(0, 20)
-        val effRestarts = if (restarts > 0) restarts else 20 + level * 2
-        val effBudget = if (budgetPerRestart > 0) budgetPerRestart else 3000 + level * 300
 
-        var bestPath: List<Int> = emptyList()
-        var bestScore = Double.NEGATIVE_INFINITY
-        var bestCombos = 0
-
-        // Several independent SA runs from different seeds; keep whichever
-        // scores highest (combo count dominates; on a tie prefer the longer,
-        // more elaborate path).
-        for (k in 0 until MULTI_RUNS) {
-            val rng = SplitMix64(seed + k.toULong())
-            val (score, path, combos) = saOnce(board, rng, maxLen, effBudget, effRestarts, target, fixedStart)
-            if (score > bestScore || (score == bestScore && path.size > bestPath.size)) {
-                bestScore = score
-                bestPath = path
-                bestCombos = combos
-            }
-        }
+        // Deterministic beam search (PuzzCombo-style scored expansion + beam
+        // pruning + self-avoid dedup) instead of random SA: it systematically
+        // grows simple non-crossing paths and keeps the highest-combo one, so
+        // the route never knots itself.
+        val (bestPath, _) = beamSearch(board, maxLen, level, target, fixedStart)
         // Re-evaluate the kept path independently so the displayed counts always
         // match the route actually drawn.
         val st = board.dragged(along = bestPath).resolveStats()
         return PDRoute(bestPath, st.combos, st.cleared)
+    }
+
+    /**
+     * Deterministic scored beam search: grow self-avoiding adjacent paths from
+     * every start, score each by combos, keep only the top-width beam each
+     * depth (pruning + dedup), and remember the highest-combo path found.
+     * No randomness -> same board always yields the same clean route.
+     */
+    private fun beamSearch(
+        board: PDBoard,
+        maxLen: Int,
+        level: Int,
+        target: OrbTarget,
+        fixedStart: Int,
+    ): Pair<List<Int>, Int> {
+        val width = when {
+            level >= 10 -> 260
+            level >= 6 -> 140
+            else -> 60
+        }
+        val starts = if (fixedStart in 0 until PDBoard.CELL_COUNT) listOf(fixedStart)
+            else (0 until PDBoard.CELL_COUNT).toList()
+
+        var beams = starts.map { listOf(it) to 0 }
+        var bestPath: List<Int> = emptyList()
+        var bestCombos = 0
+
+        for (depth in 1..maxLen) {
+            val candidates = ArrayList<Pair<List<Int>, Int>>()
+            for ((path, _) in beams) {
+                val last = path.last()
+                for (nb in neighbourIndicesOf(last)) {
+                    if (nb in path) continue // self-avoid: never revisit a cell
+                    val np = path + nb
+                    val after = board.dragged(np)
+                    val st = after.resolveStats()
+                    val bonus = if (target.matches(after.firstWave())) 300 else 0
+                    val score = st.combos * 100 + st.cleared * 8 + bonus
+                    candidates.add(np to score)
+                }
+            }
+            if (candidates.isEmpty()) break
+            val kept = candidates
+                .distinctBy { it.first }
+                .sortedByDescending { it.second }
+                .take(width)
+            for ((path, _) in kept) {
+                val combos = board.dragged(path).resolveStats().combos
+                if (combos > bestCombos || (combos == bestCombos && path.size > bestPath.size)) {
+                    bestCombos = combos
+                    bestPath = path
+                }
+            }
+            beams = kept.map { it.first to it.second }
+        }
+        return bestPath to bestCombos
     }
 
     private fun saOnce(
