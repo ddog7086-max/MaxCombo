@@ -141,24 +141,30 @@ class RouteBoardView : View {
             }
             canvas.drawPath(curve, cleanLine)
 
-            // Number every visited cell in walk order so the player follows 1→2→3
-            // instead of reading an overlapped bundle of lines.
+            // Group every step by the cell it lands on. A cell visited more than
+            // once lists all its step numbers joined by "/" instead of the later
+            // step overwriting and hiding the earlier one.
+            val visits = LinkedHashMap<Int, MutableList<Int>>()
+            for (i in path.indices) {
+                visits.getOrPut(path[i]) { mutableListOf() }.add(i + 1)
+            }
             val numBg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.argb(160, 0, 0, 0)
                 style = Paint.Style.FILL
             }
             val numPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.argb(a, 255, 255, 255)
-                textSize = cell * 0.32f
                 textAlign = Paint.Align.CENTER
                 isFakeBoldText = true
             }
-            for (i in path.indices) {
-                val c = center(path[i])
-                val r = cell * 0.19f
+            for ((cellIdx, steps) in visits) {
+                val c = center(cellIdx)
+                val multi = steps.size > 1
+                numPaint.textSize = if (multi) cell * 0.22f else cell * 0.32f
+                val r = if (multi) cell * 0.25f else cell * 0.19f
                 canvas.drawCircle(c[0], c[1], r, numBg)
                 canvas.drawText(
-                    (i + 1).toString(), c[0],
+                    steps.joinToString("/"), c[0],
                     c[1] + numPaint.textSize * 0.35f, numPaint,
                 )
             }
