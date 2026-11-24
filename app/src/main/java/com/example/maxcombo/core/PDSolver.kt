@@ -34,7 +34,7 @@ object PDSolver {
     private val NEIGHBOURS = listOf(-1 to 0, 1 to 0, 0 to -1, 0 to 1)
 
     /** Independent SA runs per board; the best result is kept. */
-    private const val MULTI_RUNS = 6
+    private const val MULTI_RUNS = 10
 
     fun solve(
         board: PDBoard,
@@ -49,8 +49,8 @@ object PDSolver {
         // Complexity 0..20 scales search effort (more restarts / budget); high
         // settings run a deeper search to chase a full board clear.
         val level = complexity.coerceIn(0, 20)
-        val effRestarts = if (restarts > 0) restarts else 10 + level
-        val effBudget = if (budgetPerRestart > 0) budgetPerRestart else 2200 + level * 140
+        val effRestarts = if (restarts > 0) restarts else 20 + level * 2
+        val effBudget = if (budgetPerRestart > 0) budgetPerRestart else 3000 + level * 300
 
         var bestPath: List<Int> = emptyList()
         var bestScore = Double.NEGATIVE_INFINITY
@@ -88,7 +88,7 @@ object PDSolver {
         var bestCombos = 0
 
         // Seed from many random drags of varied length to give SA diverse starts.
-        repeat(36) {
+        repeat(64) {
             val start = if (fixedStart in 0 until PDBoard.CELL_COUNT) {
                 fixedStart
             } else {
@@ -200,22 +200,14 @@ object PDSolver {
     ): Pair<Double, Int> {
         val after = board.dragged(along = path)
         val st = after.resolveStats()
-        // Board-clear dominates: maximise the number of orbs actually cleared
-        // (one extra clear = 100 pts, always above the smaller bonuses). On an
-        // equal clear count, prefer a route landing in the locked 5..7-combo
-        // window; 4 or 8 combos get a small consolation, anything else none.
-        // A small length reward keeps the route continuous when clears tie.
-        val comboTarget = when {
-            st.combos in 5..7 -> 40.0
-            st.combos == 4 || st.combos == 8 -> 15.0
-            else -> 0.0
-        }
-        // Goal presets: a route that satisfies the chosen clearing goal gets a
-        // large bonus so it wins over routes that merely clear more orbs.
+        // Max-combo is the primary goal: every extra combo scores high and
+        // monotonically beats fewer combos (no artificial 5..7 lock window).
+        // Cleared orbs only give a small supporting bonus; they never outrank
+        // an extra combo. Goal presets keep their large match bonus.
         val targetBonus = if (target.matches(after.firstWave())) 300.0 else 0.0
         // Count direction changes (turns). A small per-turn penalty prefers a
         // plain, straight, non-zigzag route over one that shuttles left-right;
-        // it is tiny vs one extra clear (100 pts) so clears still dominate.
+        // tiny vs one extra combo so combos still dominate.
         var turns = 0
         for (i in 1 until path.size - 1) {
             val d1r = PDBoard.rowOf(path[i]) - PDBoard.rowOf(path[i - 1])
@@ -224,7 +216,7 @@ object PDSolver {
             val d2c = PDBoard.colOf(path[i + 1]) - PDBoard.colOf(path[i])
             if (d1r != d2r || d1c != d2c) turns++
         }
-        val score = st.cleared * 100.0 + st.combos * 10.0 + comboTarget +
+        val score = st.combos * 100.0 + st.cleared * 8.0 +
             targetBonus + path.size * 0.15 - turns * 1.0
         return Pair(score, st.combos)
     }
