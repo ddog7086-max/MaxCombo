@@ -59,14 +59,14 @@ object PDSolver {
         // top to escape its local 5-6 combo optimum and find the extra waves.
         val rng = SplitMix64(seed)
         val budget = when {
-            level >= 10 -> 3000
-            level >= 6 -> 1800
-            else -> 900
+            level >= 10 -> 4000
+            level >= 6 -> 2500
+            else -> 1200
         }
         val restarts = when {
-            level >= 10 -> 5
-            level >= 6 -> 3
-            else -> 2
+            level >= 10 -> 6
+            level >= 6 -> 4
+            else -> 3
         }
         val (_, saPath, _) = saOnce(board, rng, maxLen, budget, restarts, target, fixedStart)
 

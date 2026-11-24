@@ -225,13 +225,16 @@ class PadService : Service() {
             // Complexity slider removed: search effort and route length are fixed so
             // the solver always targets a stable 5..7-combo result.
             val route = PDSolver.solve(
-                board, maxLen = 22, complexity = currentComplexity,
+                board, maxLen = 30, complexity = currentComplexity,
                 target = currentTarget, fixedStart = fixedStart,
             )
             mainHandler.post {
                 overlay?.show(board, route)
                 listener?.onBoard(board, route)
-                resultView?.text = "${route.combos}c · ${route.path.size}步 · ${route.cleared}消"
+                val c = IntArray(6)
+                for (v in board.cells) if (v in 0..5) c[v]++
+                resultView?.text =
+                    "${route.combos}c · ${route.path.size}步 · ${route.cleared}消 火${c[0]}水${c[1]}木${c[2]}光${c[3]}闇${c[4]}心${c[5]}"
                 restoreAnalyzeBtn()
             }
         }
