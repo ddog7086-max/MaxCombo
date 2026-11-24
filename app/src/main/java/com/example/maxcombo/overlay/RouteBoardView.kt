@@ -141,32 +141,34 @@ class RouteBoardView : View {
             }
             canvas.drawPath(curve, cleanLine)
 
-            // Group every step by the cell it lands on. A cell visited more than
-            // once lists all its step numbers joined by "/" instead of the later
-            // step overwriting and hiding the earlier one.
-            val visits = LinkedHashMap<Int, MutableList<Int>>()
-            for (i in path.indices) {
-                visits.getOrPut(path[i]) { mutableListOf() }.add(i + 1)
-            }
-            val numBg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb(160, 0, 0, 0)
-                style = Paint.Style.FILL
-            }
-            val numPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb(a, 255, 255, 255)
-                textAlign = Paint.Align.CENTER
-                isFakeBoldText = true
-            }
-            for ((cellIdx, steps) in visits) {
-                val c = center(cellIdx)
-                val multi = steps.size > 1
-                numPaint.textSize = if (multi) cell * 0.22f else cell * 0.32f
-                val r = if (multi) cell * 0.25f else cell * 0.19f
-                canvas.drawCircle(c[0], c[1], r, numBg)
-                canvas.drawText(
-                    steps.joinToString("/"), c[0],
-                    c[1] + numPaint.textSize * 0.35f, numPaint,
-                )
+            // Start: a solid white dot on the first orb; the flowing white line
+            // itself shows the drag order, so no step numbers are drawn (they
+            // overlapped and hid each other on multi-visit cells).
+            val start = center(path.first())
+            canvas.drawCircle(start[0], start[1], cell * 0.16f, dotPaint)
+
+            // Direction arrows along the line: one small arrowhead near the
+            // midpoint of each segment so the walk order reads at a glance.
+            for (i in 1 until path.size) {
+                val a = center(path[i - 1])
+                val b = center(path[i])
+                val mx = (a[0] + b[0]) / 2f
+                val my = (a[1] + b[1]) / 2f
+                val dx = b[0] - a[0]
+                val dy = b[1] - a[1]
+                val len = Math.hypot(dx.toDouble(), dy.toDouble()).toFloat()
+                if (len < 1f) continue
+                val ux = dx / len
+                val uy = dy / len
+                val px = -uy
+                val py = ux
+                val s = cell * 0.11f
+                val arrow = Path()
+                arrow.moveTo(mx + ux * s, my + uy * s)
+                arrow.lineTo(mx - ux * s * 0.6f + px * s * 0.6f, my - uy * s * 0.6f + py * s * 0.6f)
+                arrow.lineTo(mx - ux * s * 0.6f - px * s * 0.6f, my - uy * s * 0.6f - py * s * 0.6f)
+                arrow.close()
+                canvas.drawPath(arrow, fillPaint)
             }
 
             // End: a solid arrowhead whose tip sits exactly on the last point.
