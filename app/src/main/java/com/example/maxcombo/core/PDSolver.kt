@@ -116,10 +116,9 @@ object PDSolver {
             for ((path, _) in beams) {
                 val last = path.last()
                 for (nb in neighbourIndicesOf(last)) {
-                    // PuzzCombo-style simple route: self-avoiding. Never revisit a
-                    // cell, so the overlay line never loops back, crosses itself or
-                    // stacks on top of itself and stays readable.
-                    if (nb in path) continue
+                    // Revisiting a cell is allowed (a route may loop back), but
+                    // forbid the immediate about-turn and a tight short loop that
+                    // knots the line. Readability is handled by the pipe overlay.
                     if (path.size >= 2 && nb == path[path.size - 2]) continue
                     val np = path + nb
                     if (hasShortLoop(np)) continue
@@ -218,7 +217,6 @@ object PDSolver {
                             val extra = rng.nextInt(1, room + 1)
                             val tail = randomPathFrom(
                                 head[head.size - 1], extra, maxLen, rng,
-                                excluded = head.toSet(),
                             )
                             candidate = head + tail.drop(1)
                         } else {
@@ -226,12 +224,10 @@ object PDSolver {
                         }
                     }
                     roll < 0.80 -> {
-                        // Wiggle a single step to any neighbour; stay self-avoiding.
+                        // Wiggle a single step to any neighbour; revisiting allowed.
                         if (candidate.size < 2) return@repeat
                         val i = rng.nextInt(1, candidate.size)
-                        val others = candidate.toSet() - candidate[i]
                         val options = neighbourIndicesOf(candidate[i - 1])
-                            .filter { it !in others }
                         if (options.isNotEmpty()) {
                             candidate = candidate.toMutableList().also {
                                 it[i] = options[rng.nextInt(options.size)]
@@ -266,8 +262,6 @@ object PDSolver {
                 }
 
                 if (candidate.size < 2) return@repeat
-                // Keep the route self-avoiding: reject any path that revisits a cell.
-                if (candidate.toSet().size != candidate.size) return@repeat
                 if (hasShortLoop(candidate)) return@repeat
                 val (score, combos) = evaluate(board, candidate, target)
                 val delta = score - currentScore
@@ -351,21 +345,19 @@ object PDSolver {
         rng: SplitMix64,
         excluded: Set<Int> = emptySet(),
     ): List<Int> {
-        // Self-avoiding: the next cell may not be the one just left (about-turn)
-        // nor any cell already visited, so the route never loops back.
+        // No immediate about-turn: the next cell may not be the one just left
+        // (A->B->A forbidden). Cells may still be revisited after a detour.
         val path = mutableListOf(start)
-        val visited = mutableSetOf(start)
         var previous = -1
         var last = start
         val target = minOf(length, maxLen)
 
         while (path.size < target) {
             val options = neighbourIndicesOf(last)
-                .filter { it != previous && it !in excluded && it !in visited }
+                .filter { it != previous && it !in excluded }
             if (options.isEmpty()) break
             val next = options[rng.nextInt(options.size)]
             path.add(next)
-            visited.add(next)
             previous = last
             last = next
         }
