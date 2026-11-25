@@ -118,28 +118,28 @@ class RouteBoardView : View {
             for (i in 1 until pts.size) curve.lineTo(pts[i][0], pts[i][1])
 
             val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                strokeWidth = 10f
+                strokeWidth = 11f
                 strokeCap = Paint.Cap.ROUND
                 strokeJoin = Paint.Join.ROUND
                 style = Paint.Style.STROKE
-                color = Color.argb(a, 92, 90, 90)
+                color = Color.argb(a, 35, 35, 35)
             }
             val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                strokeWidth = 4.5f
+                strokeWidth = 5f
                 strokeCap = Paint.Cap.ROUND
                 strokeJoin = Paint.Join.ROUND
                 style = Paint.Style.STROKE
-                color = Color.argb(a, 186, 183, 179)
+                color = Color.argb(a, 255, 255, 255)
             }
             canvas.drawPath(curve, outerPaint)
             canvas.drawPath(curve, innerPaint)
 
-            // Start: a solid core-coloured dot on the first orb. The pipe itself
+            // Start: a solid white dot on the first orb. The pipe itself
             // shows the drag order; no step numbers are drawn (they overlapped
             // and hid each other on multi-visit cells).
             val start = center(path.first())
             val startPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb(a, 186, 183, 179)
+                color = Color.argb(a, 255, 255, 255)
                 style = Paint.Style.FILL
             }
             canvas.drawCircle(start[0], start[1], cell * 0.16f, startPaint)
@@ -163,7 +163,7 @@ class RouteBoardView : View {
                 outlineArrow.lineTo(end[0] - ux * s - px * s * 0.62f, end[1] - uy * s - py * s * 0.62f)
                 outlineArrow.close()
                 val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = Color.argb(a, 92, 90, 90)
+                    color = Color.argb(a, 35, 35, 35)
                     style = Paint.Style.FILL
                 }
                 val coreArrow = Path()
@@ -172,7 +172,7 @@ class RouteBoardView : View {
                 coreArrow.lineTo(end[0] - ux * s * 0.72f - px * s * 0.40f, end[1] - uy * s * 0.72f - py * s * 0.40f)
                 coreArrow.close()
                 val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = Color.argb(a, 186, 183, 179)
+                    color = Color.argb(a, 255, 255, 255)
                     style = Paint.Style.FILL
                 }
                 canvas.drawPath(outlineArrow, outlinePaint)
