@@ -133,12 +133,9 @@ class RouteBoardView : View {
                 }
             }
 
-            // Both endpoints of every edge ride their lane offset (not pulled
-            // back to the orb centre), so the whole route stays one continuous
-            // line; where it revisits an orb the passes run parallel instead of
-            // stacking on the centre point.
-            val sa = Array(edgeCount) { FloatArray(2) }
-            val sb = Array(edgeCount) { FloatArray(2) }
+            // Nodes stay at the orb centre; lane offset applies only to the
+            // segment middle. Keeping every joint on the centre avoids any
+            // diagonal connector between two neighbouring cells.
             val segMid = Array(edgeCount) { FloatArray(2) }
             val segUx = FloatArray(edgeCount)
             val segUy = FloatArray(edgeCount)
@@ -150,18 +147,16 @@ class RouteBoardView : View {
                 val uy = if (len > 1f) dy / len else 0f
                 val nx = -uy; val ny = ux
                 val off = lane[ei] * 0.18f * cell
-                sa[ei][0] = cu[0] + nx * off; sa[ei][1] = cu[1] + ny * off
-                sb[ei][0] = cv[0] + nx * off; sb[ei][1] = cv[1] + ny * off
-                segMid[ei][0] = (sa[ei][0] + sb[ei][0]) / 2f
-                segMid[ei][1] = (sa[ei][1] + sb[ei][1]) / 2f
+                segMid[ei][0] = (cu[0] + cv[0]) / 2f + nx * off
+                segMid[ei][1] = (cu[1] + cv[1]) / 2f + ny * off
                 segUx[ei] = ux; segUy[ei] = uy
             }
 
             val curve = Path()
-            curve.moveTo(sa[0][0], sa[0][1])
+            curve.moveTo(centers[0][0], centers[0][1])
             for (ei in 0 until edgeCount) {
-                curve.lineTo(sb[ei][0], sb[ei][1])
-                if (ei + 1 < edgeCount) curve.lineTo(sa[ei + 1][0], sa[ei + 1][1])
+                curve.lineTo(segMid[ei][0], segMid[ei][1])
+                curve.lineTo(centers[ei + 1][0], centers[ei + 1][1])
             }
 
             val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -202,7 +197,7 @@ class RouteBoardView : View {
             }
 
             // Start: a solid white dot on the first lane point.
-            val start = sa[0]
+            val start = centers[0]
             val startPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.argb(a, 255, 255, 255)
                 style = Paint.Style.FILL
@@ -210,7 +205,7 @@ class RouteBoardView : View {
             canvas.drawCircle(start[0], start[1], cell * 0.16f, startPaint)
 
             // End: a two-layer arrowhead whose tip sits exactly on the last lane point.
-            val end = sb[edgeCount - 1]
+            val end = centers.last()
             val ux = segUx[edgeCount - 1]
             val uy = segUy[edgeCount - 1]
             if (ux != 0f || uy != 0f) {
